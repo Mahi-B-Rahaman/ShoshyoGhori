@@ -66,7 +66,7 @@ export default function App() {
         <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 lg: p-4  bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
           <img
             // farmer image
-            src="src/assets/farmer1.png"
+            src="public/farmer1.png"
             alt="logo"
             
           />
