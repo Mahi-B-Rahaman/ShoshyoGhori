@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-
 // A simple inline SVG for a leaf/plant icon
 
 
@@ -66,7 +65,7 @@ export default function App() {
         <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 lg: p-4  bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
           <img
             // farmer image
-            src="public/farmer1.png"
+            src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
             alt="logo"
             
           />
