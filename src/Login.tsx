@@ -62,12 +62,11 @@ export default function App() {
      
      
       {!loginPage && (
-        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 lg: p-4  bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
+        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
           <img
-            // farmer image
+            className="hidden md:block md: w-40 h-400 md:w-96 md:h-96 mb-6 md:mb-0"
             src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
             alt="logo"
-            
           />
 
           <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col space-y-4 w-full max-w-md lg:w-1/2 shadow-xl">
@@ -162,24 +161,20 @@ export default function App() {
 
 
       {loginPage && (
-        <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
-          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col items-center space-y-4 w-full max-w-md shadow-xl">
-            
-            
+        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
+          <img
+            className="hidden md:block md:mr-[20%] w-40 h-40 md:w-96 md:h-96 mb-6 md:mb-0"
+            src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
+            alt="logo"
+          />
 
-            <h2 className="text-3xl font-bold text-gray-800">
-              ShoshyoGhori Login
-            </h2>
+          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col items-center space-y-4 w-full max-w-md shadow-xl">
+            <h2 className="text-3xl font-bold text-gray-800">ShoshyoGhori Login</h2>
             <p className="text-gray-600">Welcome back to the farm!</p>
-            
+
             <form onSubmit={handleLoginSubmit} className="w-full space-y-4">
               <div className="flex flex-col">
-                <label
-                  htmlFor="loginPhone"
-                  className="font-medium text-gray-700 mb-1"
-                >
-                  Farm Phone
-                </label>
+                <label htmlFor="loginPhone" className="font-medium text-gray-700 mb-1">Farm Phone</label>
                 <input
                   type="number"
                   id="loginPhone"
@@ -189,14 +184,9 @@ export default function App() {
                   className="border-2 rounded-[10px] p-2 text-black w-full"
                 />
               </div>
-              
+
               <div className="flex flex-col">
-                <label
-                  htmlFor="loginPassword"
-                  className="font-medium text-gray-700 mb-1"
-                >
-                  Field Password
-                </label>
+                <label htmlFor="loginPassword" className="font-medium text-gray-700 mb-1">Field Password</label>
                 <input
                   type="password"
                   id="loginPassword"
@@ -207,30 +197,15 @@ export default function App() {
                 />
               </div>
 
-              {loginError && (
-                  <div className="text-red-600 text-center">
-                    Invalid phone number or password!
-                  </div>
-              )}
+              {loginError && <div className="text-red-600 text-center">Invalid phone number or password!</div>}
 
               <div className="flex justify-center">
-                <button
-                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-colors"
-                  type="submit"
-                >
-                  Login
-                </button>
+                <button className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-colors" type="submit">Login</button>
               </div>
             </form>
 
-            <p className="text-center text-gray-600 mt-4">
-              Don't have an account?{' '}
-              <button
-                onClick={() => setLoginPage(false)}
-                className="font-bold text-green-700 hover:underline"
-              >
-                Sign Up
-              </button>
+            <p className="text-center text-gray-600 mt-4">Don't have an account?{' '}
+              <button onClick={() => setLoginPage(false)} className="font-bold text-green-700 hover:underline">Sign Up</button>
             </p>
           </div>
         </div>
