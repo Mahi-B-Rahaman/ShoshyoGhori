@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Dashboard from './dashboard';
 // A simple inline SVG for a leaf/plant icon
-
-
+interface User {
+  _id: string;
+  name: string;
+  phone: string;
+  password?: string; // Password might not be needed on the frontend after login
+  ipAddress?: string;
+  lat?: number;
+  lon?: number;
+}
 
 export default function App() {
-  // State to toggle between login and sign-up
+  const [isLoggedIn, setIsLoggedIn] = useState(false);  // State to toggle between login and sign-up
+  const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
+
   const [loginPage, setLoginPage] = useState(false);
 
   // --- Sign-Up State ---
@@ -12,48 +22,186 @@ export default function App() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [numberExists, setNumberExists] = useState(false);
-  const [numbererror, setNumberError] = useState(false);
+   const [numbererror, setNumberError] = useState(false);
 
-  // --- Login State ---
-  const [loginPhone, setLoginPhone] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState(false);
-
-  // Handle Sign-Up
-  const handleSignUpSubmit = (event) => {
+   // --- Login State ---
+   const [loginPhone, setLoginPhone] = useState('');
+   const [loginPassword, setLoginPassword] = useState('');
+   const [loginError, setLoginError] = useState(false);
+   const [showLoginPassword, setShowLoginPassword] = useState(false);
+   const [loginLoading, setLoginLoading] = useState(false);
+   const [loginErrorMessage, setLoginErrorMessage] = useState('');
+   const [signupLoading, setSignupLoading] = useState(false);
+   const [signupMessage, setSignupMessage] = useState('');  // Handle Sign-Up
+  const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // Reset errors
     setNumberError(false);
     setNumberExists(false);
+    setSignupMessage('');
+    setSignupLoading(true);
 
     // Validation
     if (phone.length !== 11) {
       setNumberError(true);
+      setSignupLoading(false);
       return;
     }
-    // Mock check for existing number
-    if (phone === '01234567890') {
-      setNumberExists(true);
-      return;
+
+    try {
+      // Fetch existing phone numbers from API
+      const url = 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch existing users: ${res.status}`);
+      const users = await res.json();
+
+      // Check if phone already exists
+      const phoneExists = Array.isArray(users) && users.some((u: any) => String(u.phone) === String(phone));
+      if (phoneExists) {
+        setNumberExists(true);
+        setSignupLoading(false);
+        return;
+      }
+
+      // Phone is valid and doesn't exist, POST new user to API
+      const postRes = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: username,
+          phone: phone,
+          password: password,
+        }),
+      });
+
+      if (!postRes.ok) throw new Error(`Failed to create account: ${postRes.status}`);
+      const result = await postRes.json();
+      console.log('Sign-Up Success:', result);
+      setSignupMessage('Account created successfully! You can now log in.');
+      // Clear form
+      setUsername('');
+      setPhone('');
+      setPassword('');
+      // Switch to login page after a delay
+      setTimeout(() => {
+        setLoginPage(true);
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setSignupMessage('Sign up failed. Please try again later.');
+    } finally {
+      setSignupLoading(false);
     }
-    console.log('Sign-Up Data:', { username, phone, password });
-    // On success, you could switch to login:
-    // setLoginPage(true);
   };
+
+  // Effect for auto-login from localStorage
+  useEffect(() => {
+    const attemptAutoLogin = async () => {
+      const savedUserId = localStorage.getItem('userId');
+      const savedUserPass = localStorage.getItem('userPass');
+
+      if (savedUserId && savedUserPass) {
+        setLoginLoading(true);
+        try {
+          const res = await fetch(`https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${savedUserId}`);
+          if (res.ok) {
+            const user: User = await res.json();
+            if (user.password === savedUserPass) {
+              setLoggedInUser(user);
+              setIsLoggedIn(true);
+            }
+          }
+        } catch (err) {
+          console.error("Auto-login failed:", err);
+          localStorage.clear(); // Clear invalid credentials
+        } finally {
+          setLoginLoading(false);
+        }
+      }
+    };
+    attemptAutoLogin();
+  }, []);
 
   // Handle Login
-  const handleLoginSubmit = (event) => {
+  const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoginError(false);
+    setLoginErrorMessage('');
+    setLoginLoading(true);
 
-    // Mock login check
-    if (loginPhone !== '01234567890' || loginPassword !== 'pass123') {
+    try {
+      const url = 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Response status: ${res.status}`);
+      const users = await res.json();
+
+      // find user by phone
+      const user: User | null = Array.isArray(users) ? users.find((u: any) => String(u.phone) === String(loginPhone)) : null;
+
+      if (!user) {
+        setLoginError(true);
+        setLoginErrorMessage('Phone number not found.');
+        return;
+      }
+
+      // Check password (plain-text comparison because signup currently stores plain text)
+      if (user.password !== loginPassword) {
+        setLoginError(true);
+        setLoginErrorMessage('Incorrect password.');
+        return;
+      }
+
+      // If login is successful, try to get and save geolocation data
+      if (user.ipAddress) {
+        try {
+          const geoRes = await fetch(`http://ip-api.com/json/${user.ipAddress}`);
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            if (geoData.status === 'success' && geoData.lat) {
+              // Update the user's record with lat/lon
+              await fetch(`https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${user._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat: geoData.lat, lon: geoData.lon }),
+              });
+            }
+          }
+        } catch (geoError) {
+          console.warn("Could not fetch or save geolocation data:", geoError);
+        }
+      }
+
+      // Success
+      console.log('Login Success', user.name);
+      setLoginError(false);
+      setLoginErrorMessage('');
+      setLoggedInUser(user);
+
+      // Save credentials to localStorage for persistent login
+      localStorage.setItem('userId', user._id);
+      localStorage.setItem('userPass', loginPassword);
+
+      setIsLoggedIn(true);
+    } catch (err) {
+      console.error(err);
       setLoginError(true);
-      return;
+      setLoginErrorMessage('Login failed — please try again later.');
+    } finally {
+      setLoginLoading(false);
     }
-    console.log('Login Success:', { loginPhone, loginPassword });
-    // On success, you would proceed to the app dashboard
   };
+
+  if (isLoggedIn) {
+    const handleLogout = () => {
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userPass');
+      setIsLoggedIn(false);
+      setLoggedInUser(null);
+    };
+    return <Dashboard user={loggedInUser!} onLogout={handleLogout} />;
+  }
 
   return (
 
@@ -131,12 +279,18 @@ export default function App() {
               </div>
               <div className="flex justify-center">
                 <button
-                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-6 sm:w-1/2 hover:bg-green-800 transition-colors"
+                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-6 sm:w-1/2 hover:bg-green-800 transition-colors disabled:opacity-60"
                   type="submit"
+                  disabled={signupLoading}
                 >
-                  Sign Up
+                  {signupLoading ? 'Creating account…' : 'Sign Up'}
                 </button>
               </div>
+              {signupMessage && (
+                <div className={`text-center text-sm mt-2 ${signupMessage.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>
+                  {signupMessage}
+                </div>
+              )}
             </form>
             <p className="text-center text-gray-600 mt-4">
               Already have an account?{' '}
@@ -188,19 +342,36 @@ export default function App() {
               <div className="flex flex-col">
                 <label htmlFor="loginPassword" className="font-medium text-gray-700 mb-1">Field Password</label>
                 <input
-                  type="password"
+                  type={showLoginPassword ? 'text' : 'password'}
                   id="loginPassword"
                   required
                   value={loginPassword}
                   onChange={(event) => setLoginPassword(event.target.value)}
                   className="border-2 rounded-[10px] p-2 text-black w-full"
                 />
+                <label className="mt-2 text-sm inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={showLoginPassword}
+                    onChange={(e) => setShowLoginPassword(e.target.checked)}
+                    className="mr-2"
+                  />
+                  Show password
+                </label>
               </div>
 
-              {loginError && <div className="text-red-600 text-center">Invalid phone number or password!</div>}
+              {loginError && (
+                <div className="text-red-600 text-center">{loginErrorMessage || 'Invalid phone number or password!'}</div>
+              )}
 
               <div className="flex justify-center">
-                <button className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-colors" type="submit">Login</button>
+                <button
+                  disabled={loginLoading}
+                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-colors disabled:opacity-60"
+                  type="submit"
+                >
+                  {loginLoading ? 'Logging in…' : 'Login'}
+                </button>
               </div>
             </form>
 
