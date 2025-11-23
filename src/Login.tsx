@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './dashboard';
+import { Link } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 // A simple inline SVG for a leaf/plant icon
 interface User {
   _id: string;
@@ -12,10 +14,12 @@ interface User {
 }
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);  // State to toggle between login and sign-up
-  const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
+  const { loggedInUser, setLoggedInUser, logout } = useAuth();
 
+  const [showLenderPage, setShowLenderPage] = useState(false);
   const [loginPage, setLoginPage] = useState(false);
+   
+
 
   // --- Sign-Up State ---
   const [username, setUsername] = useState('');
@@ -79,7 +83,7 @@ export default function App() {
       if (!postRes.ok) throw new Error(`Failed to create account: ${postRes.status}`);
       const result = await postRes.json();
       console.log('Sign-Up Success:', result);
-      setSignupMessage('Account created successfully! You can now log in.');
+      setSignupMessage('অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে! আপনি এখন লগইন করতে পারেন।');
       // Clear form
       setUsername('');
       setPhone('');
@@ -90,7 +94,7 @@ export default function App() {
       }, 1500);
     } catch (err) {
       console.error(err);
-      setSignupMessage('Sign up failed. Please try again later.');
+      setSignupMessage('সাইন আপ ব্যর্থ হয়েছে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।');
     } finally {
       setSignupLoading(false);
     }
@@ -110,7 +114,6 @@ export default function App() {
             const user: User = await res.json();
             if (user.password === savedUserPass) {
               setLoggedInUser(user);
-              setIsLoggedIn(true);
             }
           }
         } catch (err) {
@@ -122,7 +125,7 @@ export default function App() {
       }
     };
     attemptAutoLogin();
-  }, []);
+  }, [setLoggedInUser]);
 
   // Handle Login
   const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -142,14 +145,14 @@ export default function App() {
 
       if (!user) {
         setLoginError(true);
-        setLoginErrorMessage('Phone number not found.');
+        setLoginErrorMessage('ফোন নম্বর পাওয়া যায়নি।');
         return;
       }
 
       // Check password (plain-text comparison because signup currently stores plain text)
       if (user.password !== loginPassword) {
         setLoginError(true);
-        setLoginErrorMessage('Incorrect password.');
+        setLoginErrorMessage('ভুল পাসওয়ার্ড।');
         return;
       }
 
@@ -183,31 +186,25 @@ export default function App() {
       localStorage.setItem('userId', user._id);
       localStorage.setItem('userPass', loginPassword);
 
-      setIsLoggedIn(true);
     } catch (err) {
       console.error(err);
       setLoginError(true);
-      setLoginErrorMessage('Login failed — please try again later.');
+      setLoginErrorMessage('লগইন ব্যর্থ হয়েছে — অনুগ্রহ করে পরে আবার চেষ্টা করুন।');
     } finally {
       setLoginLoading(false);
     }
   };
 
-  if (isLoggedIn) {
-    const handleLogout = () => {
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userPass');
-      setIsLoggedIn(false);
-      setLoggedInUser(null);
-    };
-    return <Dashboard user={loggedInUser!} onLogout={handleLogout} />;
+  if (loggedInUser) {
+    return <Dashboard user={loggedInUser!} onLogout={logout} />;
   }
+
 
   return (
 
     //signup page
     <>
-     
+      
      
       {!loginPage && (
         <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
@@ -218,16 +215,16 @@ export default function App() {
           />
 
           <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col space-y-4 w-full max-w-md lg:w-1/2 shadow-xl">
-            <h2 className="text-3xl font-bold text-gray-800">
-              ShoshyoGhori Sign Up
+            <h2 className="text-3xl font-bold text-green-800">
+              শস্যঘড়ি সাইন আপ
             </h2>
             <form onSubmit={handleSignUpSubmit}>
               <div className="flex flex-col space-y-4">
                 <label
                   htmlFor="username"
-                  className="font-medium text-gray-700"
+                  className="font-medium text-green-700"
                 >
-                  Farmer Name
+                  কৃষকের নাম
                 </label>
                 <input
                   type="text"
@@ -239,8 +236,8 @@ export default function App() {
                 />
               </div>
               <div className="flex flex-col space-y-4 mt-4">
-                <label htmlFor="phone" className="font-medium text-gray-700">
-                  Farm Phone
+                <label htmlFor="phone" className="font-medium text-green-700">
+                  খামারের ফোন
                 </label>
                 <input
                   type="number"
@@ -252,21 +249,21 @@ export default function App() {
                 />
                 {numberExists && (
                   <div className="text-red-600 ml-2 text-red-600">
-                    Number Already exists!
+                    নম্বরটি ইতিমধ্যে বিদ্যমান!
                   </div>
                 )}
                 {numbererror && (
                   <div className="text-red-600 ml-2 text-red-600">
-                    Number should be 11 digits!
+                    নম্বরটি ১১ সংখ্যার হতে হবে!
                   </div>
                 )}
               </div>
               <div className="flex flex-col space-y-4 mt-4">
                 <label
                   htmlFor="password"
-                  className="font-medium text-gray-700"
+                  className="font-medium text-green-700"
                 >
-                  Field Password
+                  ফিল্ড পাসওয়ার্ড
                 </label>
                 <input
                   type="password"
@@ -283,7 +280,7 @@ export default function App() {
                   type="submit"
                   disabled={signupLoading}
                 >
-                  {signupLoading ? 'Creating account…' : 'Sign Up'}
+                  {signupLoading ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'সাইন আপ'}
                 </button>
               </div>
               {signupMessage && (
@@ -292,13 +289,19 @@ export default function App() {
                 </div>
               )}
             </form>
+             <p className="text-center text-gray-600 mt-4">
+              আপনি কি একজন মহাজন?{' '}
+              <Link to="/lender" className="font-bold text-green-700 hover:underline">
+                মহাজন পেজে যান
+              </Link>
+            </p>
             <p className="text-center text-gray-600 mt-4">
-              Already have an account?{' '}
+              ইতিমধ্যে একটি অ্যাকাউন্ট আছে?{' '}
               <button
                 onClick={() => setLoginPage(true)}
                 className="font-bold text-green-700 hover:underline"
               >
-                Login
+                লগইন
               </button>
             </p>
           </div>
@@ -323,31 +326,31 @@ export default function App() {
           />
 
           <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col items-center space-y-4 w-full max-w-md shadow-xl">
-            <h2 className="text-3xl font-bold text-gray-800">ShoshyoGhori Login</h2>
-            <p className="text-gray-600">Welcome back to the farm!</p>
+            <h2 className="text-3xl font-bold text-green-800">শস্যঘড়ি লগইন</h2>
+            <p className="text-gray-600">খামারে আবার স্বাগতম!</p>
 
             <form onSubmit={handleLoginSubmit} className="w-full space-y-4">
               <div className="flex flex-col">
-                <label htmlFor="loginPhone" className="font-medium text-gray-700 mb-1">Farm Phone</label>
+                <label htmlFor="loginPhone" className="font-medium text-green-700 mb-1">খামারের ফোন</label>
                 <input
                   type="number"
                   id="loginPhone"
                   required
                   value={loginPhone}
                   onChange={(event) => setLoginPhone(event.target.value)}
-                  className="border-2 rounded-[10px] p-2 text-black w-full"
+                  className="w-full p-3 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300"
                 />
               </div>
 
               <div className="flex flex-col">
-                <label htmlFor="loginPassword" className="font-medium text-gray-700 mb-1">Field Password</label>
+                <label htmlFor="loginPassword" className="font-medium text-green-700 mb-1">ফিল্ড পাসওয়ার্ড</label>
                 <input
                   type={showLoginPassword ? 'text' : 'password'}
                   id="loginPassword"
                   required
                   value={loginPassword}
                   onChange={(event) => setLoginPassword(event.target.value)}
-                  className="border-2 rounded-[10px] p-2 text-black w-full"
+                  className="w-full p-3 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300"
                 />
                 <label className="mt-2 text-sm inline-flex items-center">
                   <input
@@ -356,27 +359,27 @@ export default function App() {
                     onChange={(e) => setShowLoginPassword(e.target.checked)}
                     className="mr-2"
                   />
-                  Show password
+                  পাসওয়ার্ড দেখুন
                 </label>
               </div>
 
               {loginError && (
-                <div className="text-red-600 text-center">{loginErrorMessage || 'Invalid phone number or password!'}</div>
+                <div className="text-red-600 text-center">{loginErrorMessage || 'ভুল ফোন নম্বর বা পাসওয়ার্ড!'}</div>
               )}
 
               <div className="flex justify-center">
                 <button
                   disabled={loginLoading}
-                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-colors disabled:opacity-60"
+                  className="bg-green-700 text-white rounded-full h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-all duration-300 transform hover:scale-105 disabled:opacity-60 disabled:scale-100"
                   type="submit"
                 >
-                  {loginLoading ? 'Logging in…' : 'Login'}
+                  {loginLoading ? 'লগইন হচ্ছে...' : 'লগইন'}
                 </button>
               </div>
             </form>
 
-            <p className="text-center text-gray-600 mt-4">Don't have an account?{' '}
-              <button onClick={() => setLoginPage(false)} className="font-bold text-green-700 hover:underline">Sign Up</button>
+            <p className="text-center text-gray-600 mt-4">অ্যাকাউন্ট নেই?{' '}
+              <button onClick={() => setLoginPage(false)} className="font-bold text-green-700 hover:underline">সাইন আপ</button>
             </p>
           </div>
         </div>

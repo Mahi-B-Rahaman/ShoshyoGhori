@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import Navbar from "./Navbar";
 
 interface User {
   _id: string;
@@ -322,7 +321,6 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Navbar onLogout={onLogout} />
       <div className="p-8 relative flex-grow">
       {/* Confirmation Modal */}
       {selectedCrop && !plantedCropSet.has(selectedCrop["Products name"]) && (
