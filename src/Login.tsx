@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Dashboard from './dashboard';
 import { Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-// A simple inline SVG for a leaf/plant icon
-interface User {
-  _id: string;
-  name: string;
-  phone: string;
-  password?: string; // Password might not be needed on the frontend after login
-  ipAddress?: string;
-  lat?: number;
-  lon?: number;
-}
+import type { User } from './AuthContext';
 
 export default function App() {
   const { loggedInUser, setLoggedInUser, logout } = useAuth();
@@ -25,6 +16,7 @@ export default function App() {
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [location, setLocation] = useState('');
   const [numberExists, setNumberExists] = useState(false);
    const [numbererror, setNumberError] = useState(false);
 
@@ -77,6 +69,7 @@ export default function App() {
           name: username,
           phone: phone,
           password: password,
+          location: location,
         }),
       });
 
@@ -88,6 +81,7 @@ export default function App() {
       setUsername('');
       setPhone('');
       setPassword('');
+      setLocation('');
       // Switch to login page after a delay
       setTimeout(() => {
         setLoginPage(true);
@@ -99,33 +93,6 @@ export default function App() {
       setSignupLoading(false);
     }
   };
-
-  // Effect for auto-login from localStorage
-  useEffect(() => {
-    const attemptAutoLogin = async () => {
-      const savedUserId = localStorage.getItem('userId');
-      const savedUserPass = localStorage.getItem('userPass');
-
-      if (savedUserId && savedUserPass) {
-        setLoginLoading(true);
-        try {
-          const res = await fetch(`https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${savedUserId}`);
-          if (res.ok) {
-            const user: User = await res.json();
-            if (user.password === savedUserPass) {
-              setLoggedInUser(user);
-            }
-          }
-        } catch (err) {
-          console.error("Auto-login failed:", err);
-          localStorage.clear(); // Clear invalid credentials
-        } finally {
-          setLoginLoading(false);
-        }
-      }
-    };
-    attemptAutoLogin();
-  }, [setLoggedInUser]);
 
   // Handle Login
   const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -156,35 +123,17 @@ export default function App() {
         return;
       }
 
-      // If login is successful, try to get and save geolocation data
-      if (user.ipAddress) {
-        try {
-          const geoRes = await fetch(`http://ip-api.com/json/${user.ipAddress}`);
-          if (geoRes.ok) {
-            const geoData = await geoRes.json();
-            if (geoData.status === 'success' && geoData.lat) {
-              // Update the user's record with lat/lon
-              await fetch(`https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${user._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lat: geoData.lat, lon: geoData.lon }),
-              });
-            }
-          }
-        } catch (geoError) {
-          console.warn("Could not fetch or save geolocation data:", geoError);
-        }
-      }
-
       // Success
       console.log('Login Success', user.name);
       setLoginError(false);
       setLoginErrorMessage('');
-      setLoggedInUser(user);
+      const farmerUser = { ...user, accountType: 'farmer' };
+      setLoggedInUser(farmerUser);
 
       // Save credentials to localStorage for persistent login
       localStorage.setItem('userId', user._id);
       localStorage.setItem('userPass', loginPassword);
+      localStorage.setItem('accountType', 'farmer');
 
     } catch (err) {
       console.error(err);
@@ -196,7 +145,15 @@ export default function App() {
   };
 
   if (loggedInUser) {
-    return <Dashboard user={loggedInUser!} onLogout={logout} />;
+    // If a lender is logged in, they should not see the farmer dashboard.
+    if (loggedInUser.accountType === 'lender') {
+      return (
+        <div className="flex justify-center items-center h-screen text-red-500 text-2xl p-4 text-center">
+          এই পৃষ্ঠাটি অ্যাক্সেস করতে অনুগ্রহ করে কৃষক হিসাবে লগইন করুন।
+        </div>
+      );
+    }
+    return <Dashboard user={loggedInUser} onLogout={logout} />;
   }
 
 
@@ -207,15 +164,16 @@ export default function App() {
       
      
       {!loginPage && (
-        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
-          <img
-            className="hidden md:block md: w-40 h-400 md:w-96 md:h-96 mb-6 md:mb-0"
-            src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
-            alt="logo"
-          />
-
-          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col space-y-4 w-full max-w-md lg:w-1/2 shadow-xl">
-            <h2 className="text-3xl font-bold text-green-800">
+        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gray-100">
+          <div className="hidden md:block md:w-1/3">
+            <img
+              className="w-full h-auto"
+              src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
+              alt="logo"
+            />
+          </div>
+          <div className="bg-white p-8 rounded-2xl flex flex-col space-y-4 w-full max-w-md lg:w-1/2 shadow-lg">
+            <h2 className="text-3xl font-bold text-green-800 text-center">
               শস্যঘড়ি সাইন আপ
             </h2>
             <form onSubmit={handleSignUpSubmit}>
@@ -232,7 +190,7 @@ export default function App() {
                   required
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  className="border-2 rounded-[10px] p-2 text-black w-full"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
               </div>
               <div className="flex flex-col space-y-4 mt-4">
@@ -245,7 +203,7 @@ export default function App() {
                   required
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
-                  className="border-2 rounded-[10px] p-2 text-black w-full"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
                 {numberExists && (
                   <div className="text-red-600 ml-2 text-red-600">
@@ -271,12 +229,28 @@ export default function App() {
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="border-2 rounded-[10px] p-2 text-black w-full"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
+                />
+              </div>
+              <div className="flex flex-col space-y-4 mt-4">
+                <label
+                  htmlFor="location"
+                  className="font-medium text-green-700"
+                >
+                  অবস্থান
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  required
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
               </div>
               <div className="flex justify-center">
                 <button
-                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-6 sm:w-1/2 hover:bg-green-800 transition-colors disabled:opacity-60"
+                  className="bg-green-700 text-white font-bold rounded-xl h-12 w-full mt-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:shadow-inner transition-all disabled:opacity-60"
                   type="submit"
                   disabled={signupLoading}
                 >
@@ -318,16 +292,17 @@ export default function App() {
 
 
       {loginPage && (
-        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
-          <img
-            className="hidden md:block md:mr-[20%] w-40 h-40 md:w-96 md:h-96 mb-6 md:mb-0"
-            src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
-            alt="logo"
-          />
-
-          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col items-center space-y-4 w-full max-w-md shadow-xl">
-            <h2 className="text-3xl font-bold text-green-800">শস্যঘড়ি লগইন</h2>
-            <p className="text-gray-600">খামারে আবার স্বাগতম!</p>
+        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gray-100">
+          <div className="hidden md:block md:w-1/3 md:mr-12">
+            <img
+              className="w-full h-auto"
+              src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
+              alt="logo"
+            />
+          </div>
+          <div className="bg-white p-8 rounded-2xl flex flex-col items-center space-y-4 w-full max-w-md shadow-lg">
+            <h2 className="text-3xl font-bold text-green-800 text-center">শস্যঘড়ি লগইন</h2>
+            <p className="text-gray-700">খামারে আবার স্বাগতম!</p>
 
             <form onSubmit={handleLoginSubmit} className="w-full space-y-4">
               <div className="flex flex-col">
@@ -338,7 +313,7 @@ export default function App() {
                   required
                   value={loginPhone}
                   onChange={(event) => setLoginPhone(event.target.value)}
-                  className="w-full p-3 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
               </div>
 
@@ -350,7 +325,7 @@ export default function App() {
                   required
                   value={loginPassword}
                   onChange={(event) => setLoginPassword(event.target.value)}
-                  className="w-full p-3 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
                 <label className="mt-2 text-sm inline-flex items-center">
                   <input
@@ -370,7 +345,7 @@ export default function App() {
               <div className="flex justify-center">
                 <button
                   disabled={loginLoading}
-                  className="bg-green-700 text-white rounded-full h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-all duration-300 transform hover:scale-105 disabled:opacity-60 disabled:scale-100"
+                  className="bg-green-700 text-white font-bold rounded-xl h-12 w-full mt-4 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:shadow-inner transition-all disabled:opacity-60"
                   type="submit"
                 >
                   {loginLoading ? 'লগইন হচ্ছে...' : 'লগইন'}

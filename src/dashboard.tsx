@@ -1,15 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNotifications } from "./NotificationContext";
+import type { User } from './AuthContext';
 
-interface User {
-  _id: string;
-  name: string;
-  phone: string;
-  soilHumidity: number;
-  temp1: number;
-  plantedCrops?: PlantedCrop[];
-  lat?: number;
-  lon?: number;
-}
 interface Crop {
   "Season": string;
   "Transplant": string;
@@ -77,6 +69,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
   const [farmData, setFarmData] = useState({ temperature: 0, humidity: 0 });
   const [userData, setUserData] = useState<User>(user);
   const [featuredCrop, setFeaturedCrop] = useState<PlantedCrop | null>(null);
+  const { addNotification } = useNotifications();
 
   const currentSeason = getCurrentSeason();
   const bengaliSeason = translateSeasonToBengali(currentSeason);
@@ -93,8 +86,8 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
         const fetchedUserData: User = await res.json();
         setUserData(fetchedUserData);
         setFarmData({
-          temperature: fetchedUserData.temp1 || 0,
-          humidity: fetchedUserData.soilHumidity || 0,
+          temperature: (fetchedUserData as any).temp1 || 0, // Cast to any to access old property
+          humidity: (fetchedUserData as any).soilHumidity || 0, // Cast to any to access old property
         });
         // Ensure plantedDate is a Date object
         const userPlantedCrops = (fetchedUserData.plantedCrops || []).map(pc => ({
@@ -165,6 +158,25 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
 
     fetchCrops();
   }, []);
+
+  // Effect for humidity notifications
+  useEffect(() => {
+    if (user.accountType !== 'lender' && farmData.humidity > 0) {
+      if (farmData.humidity < 20) {
+        addNotification('মাটির আর্দ্রতা খুব কম। অনুগ্রহ করে জমিতে পানি দিন।', 'warning');
+      } else if (farmData.humidity > 80) { // Assuming > 80 is "too much"
+        addNotification('মাটির আর্দ্রতা খুব বেশি। জলাবদ্ধতা পরীক্ষা করুন।', 'warning');
+      }
+    }
+  }, [farmData.humidity, addNotification, user.accountType]);
+
+
+  // Effect for temperature notifications
+  useEffect(() => {
+    if (user.accountType !== 'lender' && farmData.temperature > 30) {
+      addNotification('তাপমাত্রা ৩০°C এর বেশি। নিজের যত্ন নিন, প্রচুর পানি পান করুন এবং প্রয়োজনে ফসলে পানি দিন।', 'warning');
+    }
+  }, [farmData.temperature, addNotification, user.accountType]);
 
   useEffect(() => {
     // This effect now depends on `forecast` to get the relative humidity for today.
@@ -320,11 +332,11 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
   const selectedCrop = selectedCropIndex !== null ? displayedCrops[selectedCropIndex] : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="p-8 relative flex-grow">
+    <div className="flex flex-col min-h-screen bg-white">
+      <div className="p-4 md:p-8 relative flex-grow">
       {/* Confirmation Modal */}
       {selectedCrop && !plantedCropSet.has(selectedCrop["Products name"]) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
           <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md text-center">
             <h2 className="text-2xl font-bold mb-4">নিশ্চিত করুন</h2>
             <p className="text-lg mb-6">
@@ -350,7 +362,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
 
       {/* Cancellation Confirmation Modal */}
       {cropToCancel && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
           <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md text-center">
             <h2 className="text-2xl font-bold mb-4">বাতিল নিশ্চিত করুন</h2>
             <p className="text-lg mb-6">
@@ -374,34 +386,40 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
         </div>
       )}
 
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold text-green-800 mb-2">কৃষকের ড্যাশবোর্ড</h1>
-        <div className="text-lg text-gray-600">
-          <p>স্বাগতম, <span className="font-semibold">{user.name}</span>!</p>
-          <p>খামারের তাপমাত্রা: <span className="font-semibold">{farmData.temperature}°C</span></p>
-          <p>মাটির আর্দ্রতা: <span className="font-semibold">{farmData.humidity}%</span></p>
-          {forecast && forecast.length > 0 && (
-            <p>আপেক্ষিক আর্দ্রতা: <span className="font-semibold">{Math.round(forecast[0].relative_humidity_2m_mean)}%</span></p>
-          )}
-        </div>
-      </header>
+      {/* Header and Weather Section with Background */}
+      <div className="relative rounded-3xl overflow-hidden mb-12 p-8 text-white shadow-2xl" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1932&auto=format&fit=crop)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+        <div className="absolute inset-0 bg-black/50 z-0"></div>
+        <div className="relative z-10">
+          <header className="mb-8">
+            <h1 className="text-4xl font-bold mb-2">কৃষকের ড্যাশবোর্ড</h1>
+            <div className="text-lg text-gray-200">
+              <p>স্বাগতম, <span className="font-semibold text-white">{user.name}</span>!</p>
+              <p>খামারের তাপমাত্রা: <span className="font-semibold text-white">{farmData.temperature}°C</span></p>
+              <p>মাটির আর্দ্রতা: <span className="font-semibold text-white">{farmData.humidity}%</span></p>
+              {forecast && forecast.length > 0 && (
+                <p>আপেক্ষিক আর্দ্রতা: <span className="font-semibold text-white">{Math.round(forecast[0].relative_humidity_2m_mean)}%</span></p>
+              )}
+            </div>
+          </header>
 
-      {/* Weather Forecast Section */}
-      {forecast && (
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">আবহাওয়ার পূর্বাভাস</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {forecast.map((day, index) => (
-              <div key={index} className="bg-white p-4 rounded-lg shadow-md text-center">
-                <p className="font-bold text-lg">{new Date(day.time).toLocaleDateString('bn-BD', { weekday: 'long', day: 'numeric' })}</p>
-                <p className="text-3xl my-2">{getWeatherIcon(day.weathercode)}</p>
-                <p className="text-xl font-semibold">{Math.round(day.temperature_2m_max)}° / {Math.round(day.temperature_2m_min)}°</p>
-                <p className="text-gray-600">আর্দ্রতা: {Math.round(day.relative_humidity_2m_mean)}%</p>
+          {/* Weather Forecast Section */}
+          {forecast && (
+            <section>
+              <h2 className="text-2xl font-bold mb-4">আবহাওয়ার পূর্বাভাস</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {forecast.map((day, index) => (
+                  <div key={index} className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl shadow-lg text-center border border-white/30">
+                    <p className="font-bold text-lg">{new Date(day.time).toLocaleDateString('bn-BD', { weekday: 'long', day: 'numeric' })}</p>
+                    <p className="text-3xl my-2">{getWeatherIcon(day.weathercode)}</p>
+                    <p className="text-xl font-semibold">{Math.round(day.temperature_2m_max)}° / {Math.round(day.temperature_2m_min)}°</p>
+                    <p className="text-gray-200">আর্দ্রতা: {Math.round(day.relative_humidity_2m_mean)}%</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </section>
+          )}
           </div>
-        </section>
-      )}
+      </div>
 
       {/* Featured Crop Progress Bar */}
       {featuredCrop && (
@@ -419,7 +437,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
             value={searchQuery}
             onChange={handleSearchChange}
             placeholder="ফসলের নাম লিখুন..."
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
           />
         </div>
 
@@ -432,7 +450,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
                 const isPlanted = !!plantedInfo;
                 const key = `${crop["Products name"]}-${index}`;
 
-                if (isPlanted) {
+                if (isPlanted && plantedInfo) {
                   return <PlantedCropCard
                     key={key}
                     plantedCrop={plantedInfo}
@@ -466,16 +484,23 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
 const CropCard = ({ crop, isSuitable, onClick }: { crop: Crop; isSuitable: boolean; onClick: () => void; }) => (
   <div
     onClick={onClick}
-    className={`p-6 rounded-lg shadow-md border-l-4 transition-all duration-200 ${
+    style={{ backgroundImage: `url(https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/crops.jpg?raw=true)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+    className={`relative p-4 rounded-2xl shadow-lg transition-all duration-300 flex flex-col justify-end h-48 overflow-hidden ${
       isSuitable
-        ? 'cursor-pointer bg-white border-green-600 hover:shadow-lg hover:bg-gray-50'
-        : 'bg-red-50 border-red-500 cursor-not-allowed opacity-70'
+        ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
+        : 'cursor-not-allowed shadow-md'
     }`}
   >
-    <h3 className={`text-xl font-bold mb-2 ${isSuitable ? 'text-green-800' : 'text-red-800'}`}>{crop["Products name"]}</h3>
-    <p className="text-gray-700"><span className="font-semibold">ফসলের ধরন:</span> {crop["Crops Type"]}</p>
-    <p className="text-gray-700"><span className="font-semibold">রোপণের সময়:</span> {crop.Transplant}</p>
-    <p className="text-gray-700"><span className="font-semibold">ফসল তোলার সময়:</span> {crop.Harvest}</p>
+    <div className={`absolute inset-0 ${isSuitable ? 'bg-black/40' : 'bg-red-900/60'}`}></div>
+    <div className="relative z-10 text-white">
+      <h3 className="text-lg font-bold mb-1">{crop["Products name"]}</h3>
+      <p className="text-sm text-gray-200"><span className="font-semibold">ধরন:</span> {crop["Crops Type"]}</p>
+      <p className="text-sm text-gray-200"><span className="font-semibold">রোপণ:</span> {crop.Transplant}</p>
+      <p className="text-sm text-gray-200"><span className="font-semibold">ফসল তোলা:</span> {crop.Harvest}</p>
+      {!isSuitable && (
+        <p className="text-xs font-bold text-yellow-300 mt-2">এই আবহাওয়ার জন্য উপযুক্ত নয়</p>
+      )}
+    </div>
   </div>
 );
 
@@ -503,33 +528,30 @@ const PlantedCropCard = ({ plantedCrop, onRemove, onSelect }: { plantedCrop: Pla
   return (
     <div
       onClick={onSelect}
-      className="p-6 rounded-lg shadow-md bg-blue-50 border-l-4 border-blue-600 relative cursor-pointer hover:shadow-lg transition-shadow"
+      style={{ backgroundImage: `url(https://github.com/Mahi-B-Rahaman/CropClock/blob/main/src/assets/LoginBG.jpeg?raw=true)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+      className="relative p-4 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-end h-48 overflow-hidden"
     >
-      <h3 className="text-xl font-bold text-blue-800 mb-2">{crop["Products name"]}</h3>
+      <div className="absolute inset-0 bg-blue-900/50"></div>
       <button
         onClick={() => onRemove(crop["Products name"])}
-        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-700 transition-colors text-lg font-bold leading-none"
+        className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-red-600 active:shadow-inner transition-all text-lg font-bold leading-none"
         aria-label="বাতিল করুন"
         title="বাতিল করুন"
       >
         &times;
       </button>
-      <p className="text-gray-700 mb-4"><span className="font-semibold">রোপণ করা হয়েছে</span></p>
-      
-      <div>
+      <div className="relative z-10 text-white">
+        <h3 className="text-lg font-bold mb-1">{crop["Products name"]}</h3>
+        <p className="text-sm text-gray-200 mb-2"><span className="font-semibold">রোপণ করা হয়েছে</span></p>
         <div className="flex justify-between mb-1">
-          <span className="text-base font-medium text-blue-700">অগ্রগতি</span>
-          <span className="text-sm font-medium text-blue-700">{progress}%</span>
+          <span className="text-xs font-medium">অগ্রগতি</span>
+          <span className="text-xs font-medium">{progress}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-4">
+        <div className="w-full bg-white/30 rounded-full h-2.5">
           <div
-            className="bg-blue-600 h-4 rounded-full transition-all duration-500"
+            className="bg-white h-2.5 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           ></div>
-        </div>
-        <div className="flex justify-between mt-1 text-xs text-gray-500">
-          <span>রোপণ</span>
-          <span>ফসল তোলা</span>
         </div>
       </div>
     </div>
@@ -556,22 +578,22 @@ const FeaturedCropProgress = ({ plantedCrop }: { plantedCrop: PlantedCrop }) => 
   const progress = totalDurationDays > 0 ? Math.min(Math.floor((daysSincePlanting / totalDurationDays) * 100), 100) : 0;
 
   return (
-    <section className="mb-8 p-6 rounded-lg shadow-md bg-white border-l-4 border-green-600">
+    <section className="mb-8 p-6 rounded-2xl shadow-lg bg-white border-l-8 border-green-600">
       <h2 className="text-2xl font-bold text-gray-800 mb-4">নির্বাচিত ফসল: <span className="text-green-700">{crop["Products name"]}</span></h2>
       <div>
         <div className="flex justify-between mb-1">
           <span className="text-base font-medium text-green-700">অগ্রগতি</span>
           <span className="text-sm font-medium text-green-700">{progress}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-4">
+        <div className="w-full bg-gray-200 rounded-full h-3.5">
           <div
-            className="bg-green-600 h-4 rounded-full transition-all duration-500"
+            className="bg-green-600 h-3.5 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
-        <div className="flex justify-between mt-1 text-xs text-gray-500">
+        <div className="flex justify-between mt-1 text-xs text-gray-600">
           <span>রোপণ</span>
-          <span>ফসল তোলা</span>
+          <span>ফসল তোলা ({crop.Harvest})</span>
         </div>
       </div>
     </section>

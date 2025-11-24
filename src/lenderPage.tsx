@@ -1,37 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-
-interface Rental {
-  _id: string;
-  items: string;
-  itemDesc?: string;
-  rentDate: string;
-  returnDate: string;
-  price: number;
-  rentedByName?: string;
-  rentedByNumber?: string;
-}
-
-interface User {
-  _id: string;
-  name: string;
-  phone: string;
-  password?: string; // Password might not be needed on the frontend after login
-  ipAddress?: string;
-  lat?: number;
-  lon?: number;
-  rentals?: Rental[];
-  accountType?: string;
-}
-
-
+import { useNotifications } from './NotificationContext';
+import NotificationBell from './NotificationBell';
+import type { User } from './AuthContext';
 
 
 const LenderPage = () => {
 const { loggedInUser, setLoggedInUser } = useAuth();
+const { addNotification } = useNotifications();
 const [LenderloginPage, setLenderloginPage] = useState(false);
 const [username, setUsername] = useState('');
 const [phone, setPhone] = useState('');
+const [location, setLocation] = useState('');
 const [password, setPassword] = useState('');
 const [numberExists, setNumberExists] = useState(false);
 const [numbererror, setNumberError] = useState(false);
@@ -92,8 +72,16 @@ const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       setLoggedInUser(user);
       console.log('Logged in user data:', user);
 
+      // Load notifications from the database into the context
+      if (user.notification && user.notification.length > 0) {
+        user.notification.forEach(msg => {
+          addNotification(msg, 'info');
+        });
+      }
+
       // Save credentials to localStorage for persistent login
       localStorage.setItem('userId', user._id);
+      localStorage.setItem('userPass', loginPassword);
 
       // Redirect to lender dashboard or another page
       //window.location.href = '/lenderDashboard';
@@ -157,6 +145,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
           name: username,
           phone: phone,
           password: password,
+          location: location,
           accountType: 'lender',
         }),
       });
@@ -169,6 +158,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       setUsername('');
       setPhone('');
       setPassword('');
+      setLocation('');
       // Switch to login page after a delay
       setTimeout(() => {
         setLenderloginPage(true);
@@ -181,6 +171,35 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     }
   };
 
+  // Effect to poll for lender data updates
+  useEffect(() => {
+    if (!loggedIn || !userData) {
+      return; // Don't poll if not logged in as a lender
+    }
+
+    const fetchLenderData = async () => {
+      try {
+        const url = `https://crop-clock-renter-api-uos1.vercel.app/api/renterdata/${userData._id}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          console.error('Polling: Failed to fetch lender data.');
+          return;
+        }
+        const updatedUser = await res.json();
+        // Update the global state if the data has changed
+        if (JSON.stringify(updatedUser) !== JSON.stringify(loggedInUser)) {
+          setLoggedInUser(updatedUser);
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    };
+    
+    const intervalId = setInterval(fetchLenderData, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup on component unmount
+  }, [loggedIn, loggedInUser, setLoggedInUser]);
+
   const handleCreateListingSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!userData) return;
@@ -189,7 +208,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 
     const newRental = {
       items: itemName,
-      itemsDesc: itemDesc,
+      itemDesc: itemDesc,
       rentDate: rentDate,
       returnDate: returnDate,
       price: Number(price),
@@ -215,7 +234,6 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       const updatedUser = await res.json();
 
       // Update local state to reflect the change
-      setUserData(updatedUser);
       setLoggedInUser(updatedUser);
 
       // Clear form fields
@@ -224,6 +242,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       setRentDate('');
       setReturnDate('');
       setPrice('');
+      setListingMessage('তালিকা সফলভাবে তৈরি হয়েছে!');
     } catch (error) {
       console.error(error);
       setListingMessage('তালিকা তৈরিতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।');
@@ -262,15 +281,16 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       
      
       {!LenderloginPage && !loggedIn &&(
-        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
-          <img
-            className="hidden md:block md: w-40 h-400 md:w-96 md:h-96 mb-6 md:mb-0"
-            src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
-            alt="logo"
-          />
-
-          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col space-y-4 w-full max-w-md lg:w-1/2 shadow-xl">
-            <h2 className="text-3xl font-bold text-green-800">
+        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gray-100">
+          <div className="hidden md:block md:w-1/3">
+            <img
+              className="w-full h-auto"
+              src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
+              alt="logo"
+            />
+          </div>
+          <div className="bg-white p-8 rounded-2xl flex flex-col space-y-4 w-full max-w-md lg:w-1/2 shadow-lg">
+            <h2 className="text-3xl font-bold text-green-800 text-center">
               মহাজন সাইন আপ
             </h2>
             <form onSubmit={handleSignUpSubmit}>
@@ -287,7 +307,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
                   required
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  className="border-2 border-green-300 rounded-[10px] p-2 text-black w-full focus:ring-green-500 focus:border-green-500"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
               </div>
               <div className="flex flex-col space-y-4 mt-4">
@@ -300,7 +320,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
                   required
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
-                  className="border-2 border-green-300 rounded-[10px] p-2 text-black w-full focus:ring-green-500 focus:border-green-500"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
                 {numberExists && (
                   <div className="text-red-600 ml-2 text-red-600">
@@ -326,12 +346,28 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="border-2 border-green-300 rounded-[10px] p-2 text-black w-full focus:ring-green-500 focus:border-green-500"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
+                />
+              </div>
+              <div className="flex flex-col space-y-4 mt-4">
+                <label
+                  htmlFor="location"
+                  className="font-medium text-green-700"
+                >
+                  অবস্থান
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  required
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
               </div>
               <div className="flex justify-center">
                 <button
-                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-6 sm:w-1/2 hover:bg-green-800 transition-colors disabled:opacity-60"
+                  className="bg-green-700 text-white font-bold rounded-xl h-12 w-full mt-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:shadow-inner transition-all disabled:opacity-60"
                   type="submit"
                   disabled={signupLoading}
                 >
@@ -367,16 +403,17 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 
 
       {LenderloginPage && !loggedIn && (
-        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
-          <img
-            className="hidden md:block md:mr-[20%] w-40 h-40 md:w-96 md:h-96 mb-6 md:mb-0"
-            src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
-            alt="logo"
-          />
-
-          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-[30px] flex flex-col items-center space-y-4 w-full max-w-md shadow-xl">
-            <h2 className="text-3xl font-bold text-green-800">মহাজন লগইন</h2>
-            <p className="text-gray-600">আবারও স্বাগতম!</p>
+        <div className="min-h-screen flex flex-col lg:flex-row justify-center items-center p-4 bg-gray-100">
+          <div className="hidden md:block md:w-1/3 md:mr-12">
+            <img
+              className="w-full h-auto"
+              src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/farmer1.png?raw=true"
+              alt="logo"
+            />
+          </div>
+          <div className="bg-white p-8 rounded-2xl flex flex-col items-center space-y-4 w-full max-w-md shadow-lg">
+            <h2 className="text-3xl font-bold text-green-800 text-center">মহাজন লগইন</h2>
+            <p className="text-gray-700">আবারও স্বাগতম!</p>
 
             <form onSubmit={handleLoginSubmit} className="w-full space-y-4">
               <div className="flex flex-col">
@@ -387,7 +424,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
                   required
                   value={loginPhone}
                   onChange={(event) => setLoginPhone(event.target.value)}
-                  className="border-2 border-green-300 rounded-[10px] p-2 text-black w-full focus:ring-green-500 focus:border-green-500"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
               </div>
 
@@ -399,7 +436,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
                   required
                   value={loginPassword}
                   onChange={(event) => setLoginPassword(event.target.value)}
-                  className="border-2 border-green-300 rounded-[10px] p-2 text-black w-full focus:ring-green-500 focus:border-green-500"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition shadow-inner bg-gray-50"
                 />
                 <label className="mt-2 text-sm inline-flex items-center">
                   <input
@@ -419,7 +456,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
               <div className="flex justify-center">
                 <button
                   disabled={loginLoading}
-                  className="bg-green-700 text-white rounded-[30px] h-12 w-full mt-4 sm:w-1/2 hover:bg-green-800 transition-colors disabled:opacity-60"
+                  className="bg-green-700 text-white font-bold rounded-xl h-12 w-full mt-4 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:shadow-inner transition-all disabled:opacity-60"
                   type="submit"
                 >
                   {loginLoading ? 'লগইন হচ্ছে...' : 'লগইন'}
@@ -440,18 +477,21 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         <>
           {/* Lender Dashboard or Welcome Page & show renter items */}
             
-          <div className="min-h-screen p-8 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-100">
+          <div className="p-4 md:p-8 bg-white min-h-screen">
             <header className="mb-8">
               <h1 className="text-4xl font-bold text-green-800 mb-2">মহাজন ড্যাশবোর্ড</h1>
-              <p className="text-lg text-gray-600">স্বাগতম, <span className="font-semibold">{userData.name}</span>!</p>
+              <div className="flex items-center gap-4">
+                <p className="text-lg text-gray-700">স্বাগতম, <span className="font-semibold">{userData.name}</span>!</p>
+                <NotificationBell />
+              </div>
             </header>
 
             <section>
               <h2 className="text-2xl font-bold text-gray-800 mb-4">আপনার ভাড়া দেওয়া আইটেম</h2>
               {userData.rentals && userData.rentals.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {userData.rentals.map((rental) => ( 
-                    <div key={rental._id} className="bg-white/70 backdrop-blur-md p-6 rounded-xl shadow-lg border-l-4 border-green-500 relative transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                  {userData.rentals.map((rental) => (
+                    <div key={rental._id} className="bg-white p-6 rounded-2xl shadow-lg border relative transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
                       <h3 className="text-xl font-bold text-blue-800 mb-2">{rental.items}</h3>
                       
                       <p className="text-gray-700"><span className="font-semibold">মহাজনের নাম:</span> { (userData.name)}</p>
@@ -470,7 +510,7 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
                       )}
                       <button
                         onClick={() => handleRemoveListing(rental._id)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-700 transition-colors text-lg font-bold leading-none"
+                        className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-red-600 active:shadow-inner transition-all text-lg font-bold leading-none"
                         aria-label="তালিকা সরান"
                         title="তালিকা সরান"
                       >&times;</button>
@@ -484,51 +524,51 @@ const handleSignUpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
           </div>
 
           {/* Create New Listing Form */}
-          <div className="p-8">
-            <section className="bg-white/70 backdrop-blur-md p-8 rounded-lg shadow-lg mt-8">
+          <div className="p-4 md:p-8 bg-gray-50">
+            <section className="bg-white p-8 rounded-2xl shadow-lg border mt-8 max-w-4xl mx-auto">
               <h2 className="text-2xl font-bold text-green-800 mb-6">নতুন ভাড়ার তালিকা তৈরি করুন</h2>
               <form onSubmit={handleCreateListingSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Item Name */}
                   <div>
                     <label htmlFor="itemName" className="block text-sm font-medium text-gray-700 mb-1">আইটেমের নাম</label> 
-                    <input type="text" id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition-all duration-300" />
+                    <input type="text" id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required className="w-full p-3 border border-gray-200 rounded-xl shadow-inner bg-gray-50 focus:ring-green-500 focus:border-green-500 transition" />
                   </div>
 
                   {/* Price */}
                   <div>
                     <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">মূল্য ($)</label>
-                    <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} required className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition-all duration-300" />
+                    <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} required className="w-full p-3 border border-gray-200 rounded-xl shadow-inner bg-gray-50 focus:ring-green-500 focus:border-green-500 transition" />
                   </div>
 
                   {/* Item Description */}
                   <div className="md:col-span-2">
                     <label htmlFor="itemDesc" className="block text-sm font-medium text-gray-700 mb-1">বিবরণ</label>
-                    <textarea id="itemDesc" value={itemDesc} onChange={(e) => setItemDesc(e.target.value)} rows={3} className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition-all duration-300"></textarea>
+                    <textarea id="itemDesc" value={itemDesc} onChange={(e) => setItemDesc(e.target.value)} rows={3} className="w-full p-3 border border-gray-200 rounded-xl shadow-inner bg-gray-50 focus:ring-green-500 focus:border-green-500 transition"></textarea>
                   </div>
 
                   {/* Rent Date */}
                   <div>
                     <label htmlFor="rentDate" className="block text-sm font-medium text-gray-700 mb-1">ভাড়া শুরুর তারিখ</label>
-                    <input type="date" id="rentDate" value={rentDate} onChange={(e) => setRentDate(e.target.value)} required className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition-all duration-300" />
+                    <input type="date" id="rentDate" value={rentDate} onChange={(e) => setRentDate(e.target.value)} required className="w-full p-3 border border-gray-200 rounded-xl shadow-inner bg-gray-50 focus:ring-green-500 focus:border-green-500 transition" />
                   </div>
 
                   {/* Return Date */}
                   <div>
                     <label htmlFor="returnDate" className="block text-sm font-medium text-gray-700 mb-1">ভাড়া শেষের তারিখ</label>
-                    <input type="date" id="returnDate" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} required className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition-all duration-300" />
+                    <input type="date" id="returnDate" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} required className="w-full p-3 border border-gray-200 rounded-xl shadow-inner bg-gray-50 focus:ring-green-500 focus:border-green-500 transition" />
                   </div>
                 </div>
 
                 <div className="mt-6 flex items-center justify-end gap-4">
                   {listingMessage && (
-                    <p className={`text-sm ${listingMessage.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>
+                    <p className={`text-sm ${listingMessage.includes('সফলভাবে') ? 'text-green-600' : 'text-red-600'}`}>
                       {listingMessage}
                     </p>
                   )}
                   <button
                     type="submit"
-                    className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105"
+                    className="bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:shadow-inner transition-all"
                   >
                     তালিকা তৈরি করুন
                   </button>
