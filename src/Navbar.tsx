@@ -103,11 +103,13 @@ const Navbar = () => {
               <NavLink to="/crop-care" className="block text-gray-600 hover:text-green-700 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>ফসলের যত্ন</NavLink>
               {loggedInUser && (
                 <div className="border-t border-gray-200 pt-4 mt-2">
-                  <div className="flex items-center px-3 mb-3">
-                    <div className="flex-shrink-0">{loggedInUser.accountType !== 'lender' && <NotificationBell />}</div>
-                    <div className="ml-3">
+                  <div className="flex items-center justify-between px-3 mb-3">
+                    <div>
                       <div className="text-base font-medium text-gray-800">{loggedInUser.name}</div>
                       <div className="text-sm font-medium text-gray-500">{loggedInUser.phone}</div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      {loggedInUser.accountType !== 'lender' && <NotificationBell />}
                     </div>
                   </div>
                   <NavLink to="/profile" className="block text-gray-600 hover:text-green-700 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>আমার প্রোফাইল</NavLink>
