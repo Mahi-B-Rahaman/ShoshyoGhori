@@ -142,9 +142,9 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
-      <div className="max-w-2xl w-full mx-auto bg-white p-8 rounded-2xl shadow-lg">
-        <h1 className="text-3xl font-bold text-green-800 mb-8">আমার প্রোফাইল</h1>
+    <div className="p-4 sm:p-6 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
+      <div className="max-w-2xl w-full mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-lg">
+        <h1 className="text-2xl md:text-3xl font-bold text-green-800 mb-8">আমার প্রোফাইল</h1>
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
             <label htmlFor="name" className="block text-gray-700 font-medium mb-2">নাম</label>

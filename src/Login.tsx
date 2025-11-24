@@ -172,7 +172,7 @@ export default function App() {
       =========================================
       */}
       {!loginPage && (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
+        <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row w-full max-w-5xl">
             
             {/* Image Section */}
@@ -184,13 +184,13 @@ export default function App() {
                 alt="Farmer in field"
               />
               <div className="relative z-20 p-12 flex flex-col justify-end h-full text-white">
-                <h2 className="text-4xl font-bold mb-2">শস্যঘড়ি</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-2">শস্যঘড়ি</h2>
                 <p className="text-emerald-100 text-lg">আধুনিক প্রযুক্তির সাথে কৃষির মেলবন্ধন।</p>
               </div>
             </div>
 
             {/* Form Section */}
-            <div className="lg:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+            <div className="lg:w-1/2 p-6 md:p-12 flex flex-col justify-center">
               <h2 className="text-3xl font-bold text-emerald-900 mb-2 text-center lg:text-left">
                 শস্যঘড়ি সাইন আপ
               </h2>
@@ -299,7 +299,7 @@ export default function App() {
       =========================================
       */}
       {loginPage && (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
+        <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full max-w-4xl">
             
             {/* Image/Brand Sidebar */}

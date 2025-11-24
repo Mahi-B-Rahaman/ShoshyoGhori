@@ -268,7 +268,7 @@ const LenderPage = () => {
       ========================================= 
       */}
       {!LenderloginPage && !loggedIn && (
-        <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
+        <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center p-4 md:p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row w-full max-w-5xl">
             
             {/* Image Section */}
@@ -280,13 +280,13 @@ const LenderPage = () => {
                 alt="Farming Equipment"
               />
               <div className="relative z-20 p-12 flex flex-col justify-end h-full text-white">
-                <h2 className="text-4xl font-bold mb-2">শস্যঘড়ি</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-2">শস্যঘড়ি</h2>
                 <p className="text-emerald-100 text-lg">আপনার কৃষি যন্ত্রপাতি ভাড়ায় দিন এবং কৃষিতে অবদান রাখুন।</p>
               </div>
             </div>
 
             {/* Form Section */}
-            <div className="lg:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+            <div className="lg:w-1/2 p-6 md:p-12 flex flex-col justify-center">
               <h2 className="text-3xl font-bold text-emerald-900 mb-2 text-center lg:text-left">
                 মহাজন সাইন আপ
               </h2>
@@ -389,7 +389,7 @@ const LenderPage = () => {
       ========================================= 
       */}
       {LenderloginPage && !loggedIn && (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
+        <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-gradient-to-br from-emerald-50 to-teal-100">
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full max-w-4xl">
             
             {/* Image/Brand Sidebar */}
@@ -511,7 +511,7 @@ const LenderPage = () => {
             </div>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-8">
             
             {/* Listings Section */}
             <section className="mb-12">
@@ -607,7 +607,7 @@ const LenderPage = () => {
                    </h2>
                  </div>
                  
-                 <div className="p-8">
+                 <div className="p-6 md:p-8">
                   <form onSubmit={handleCreateListingSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       

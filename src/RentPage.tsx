@@ -169,13 +169,13 @@ const RentPage = () => {
   if (error) return <div className="text-center p-8 text-red-500">{error}</div>;
 
   return (
-    <div className="p-4 md:p-8 bg-white min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 bg-white min-h-screen">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold text-green-800 mb-2">খামার সরঞ্জাম ভাড়া করুন</h1>
-        <p className="text-lg text-gray-700">মহাজনদের ভারা দেওয়া সরঞ্জাম দেখুন</p>
+        <h1 className="text-3xl md:text-4xl font-bold text-green-800 mb-2">খামার সরঞ্জাম ভাড়া করুন</h1>
+        <p className="text-md md:text-lg text-gray-700">মহাজনদের ভারা দেওয়া সরঞ্জাম দেখুন</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {allRentals.length > 0 ? allRentals.map(({ rental, lender, lenderId }) => (
           <div key={rental._id} className="bg-white p-6 rounded-2xl shadow-md border transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
             <h3 className="text-xl font-bold text-green-800 mb-2">{rental.items}</h3>
@@ -209,10 +209,10 @@ const RentPage = () => {
       {loggedInUser && myRentedItems.length > 0 && (
         <div className="mt-16">
           <header className="mb-8">
-            <h2 className="text-3xl font-bold text-green-800 mb-2">আমার ভাড়া করা সরঞ্জাম</h2>
-            <p className="text-lg text-gray-700">আপনার বর্তমানে ভাড়া করা সরঞ্জামগুলো নিচে দেখুন।</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-green-800 mb-2">আমার ভাড়া করা সরঞ্জাম</h2>
+            <p className="text-md md:text-lg text-gray-700">আপনার বর্তমানে ভাড়া করা সরঞ্জামগুলো নিচে দেখুন।</p>
           </header>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {myRentedItems.map(({ rental, lender, lenderId }) => (
               <div key={rental._id} className="bg-white p-6 rounded-2xl shadow-md border border-blue-300 transition-all duration-300">
                 <h3 className="text-xl font-bold text-blue-800 mb-2">{rental.items}</h3>
