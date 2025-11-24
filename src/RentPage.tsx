@@ -9,6 +9,7 @@ interface CombinedRental {
   lender: {
     name: string;
     phone: string;
+    location?: string;
   };
 }
 
@@ -38,7 +39,7 @@ const RentPage = () => {
           (user.rentals || []).map(rental => ({
             rental,
             lenderId: user._id,
-            lender: { name: user.name, phone: user.phone },
+            lender: { name: user.name, phone: user.phone, location: user.location },
           }))
         );
         
@@ -63,7 +64,7 @@ const RentPage = () => {
 
   const handleRentItem = async (rentalId: string, lenderId: string) => {
     if (!loggedInUser) {
-      alert('আইটেম ভাড়া করতে অনুগ্রহ করে কৃষক হিসাবে লগইন করুন।');
+      alert('সরঞ্জাম ভাড়া করতে অনুগ্রহ করে কৃষক হিসাবে লগইন করুন।');
       return;
     }
 
@@ -81,45 +82,18 @@ const RentPage = () => {
           ...rental,
           rentedByName: loggedInUser.name,
           rentedByNumber: loggedInUser.phone,
+          rentedByLocation: loggedInUser.location,
         };
       }
       return rental;
     });
 
-    try {
-      // --- 1. Update Farmer's Data ---
-      const farmerApiUrl = `https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${loggedInUser._id}`;
-      const rentalToAdd = {
-        itemName: lender.rentals.find(r => r._id === rentalId)?.items,
-        itemsDesc: lender.rentals.find(r => r._id === rentalId)?.itemDesc,
-        rentDate: lender.rentals.find(r => r._id === rentalId)?.rentDate,
-        returnDate: lender.rentals.find(r => r._id === rentalId)?.returnDate,
-        lenderName: lender.name,
-        lenderNumber: lender.phone,
-        price: lender.rentals.find(r => r._id === rentalId)?.price,
-      };
+    try {      
+      // --- Update Lender's Data ---
+      const rentalToAdd = lender.rentals.find(r => r._id === rentalId);
+      if (!rentalToAdd) throw new Error("Rental item not found.");
 
-      // Fetch current farmer data to get existing rentedItems
-      const farmerRes = await fetch(farmerApiUrl);
-      if (!farmerRes.ok) throw new Error("Failed to fetch farmer's current data.");
-      const currentFarmerData = await farmerRes.json();
-      const existingRentedItems = currentFarmerData.rentedItems || [];
-
-      const farmerUpdateRes = await fetch(farmerApiUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rentedItems: [...existingRentedItems, rentalToAdd],
-        }),
-      });
-
-      if (!farmerUpdateRes.ok) {
-        throw new Error("Failed to update farmer's profile with rented item.");
-      }
-
-
-      // --- 2. Update Lender's Data ---
-      const notificationMessage = `${loggedInUser.name} আপনার '${rentalToAdd.itemName}' আইটেমটি ভাড়া করেছেন।`;
+      const notificationMessage = `${loggedInUser.name} আপনার '${rentalToAdd.items}' সরঞ্জাম ভাড়া করেছেন।`;
       const existingNotifications = lender.notification || [];
       const updatedNotifications = [...existingNotifications, notificationMessage];
 
@@ -165,7 +139,7 @@ const RentPage = () => {
 
     // Find the item name for the notification before we change the state
     const itemToReturn = myRentedItems.find(item => item.rental._id === rentalId);
-    const itemName = itemToReturn?.rental.items || 'একটি আইটেম';
+    const itemName = itemToReturn?.rental.items || 'একটি সরঞ্জাম';
 
 
     // Find the rental and unset the renter's info
@@ -191,24 +165,28 @@ const RentPage = () => {
     } catch (error) { console.error('Failed to return item:', error); }
   };
 
-  if (loading) return <div className="text-center p-8">ভাড়ার আইটেম লোড হচ্ছে...</div>;
+  if (loading) return <div className="text-center p-8">ভাড়ার সরঞ্জাম লোড হচ্ছে...</div>;
   if (error) return <div className="text-center p-8 text-red-500">{error}</div>;
 
   return (
     <div className="p-4 md:p-8 bg-white min-h-screen">
       <header className="mb-8">
         <h1 className="text-4xl font-bold text-green-800 mb-2">খামার সরঞ্জাম ভাড়া করুন</h1>
-        <p className="text-lg text-gray-700">মহাজনদের থেকে উপলব্ধ আইটেম ব্রাউজ করুন।</p>
+        <p className="text-lg text-gray-700">মহাজনদের ভারা দেওয়া সরঞ্জাম দেখুন</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {allRentals.length > 0 ? allRentals.map(({ rental, lender, lenderId }) => (
           <div key={rental._id} className="bg-white p-6 rounded-2xl shadow-md border transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
             <h3 className="text-xl font-bold text-green-800 mb-2">{rental.items}</h3>
-            <p className="text-gray-700 mt-2"><span className="font-semibold">বিবরণ:</span> {rental.itemDesc || 'নেই'}</p>
+            <p className="text-gray-700 mt-2"><span className="font-semibold">বিবরণ:</span> {rental.itemsDesc || 'নেই'}</p>
+            <p className="text-sm text-gray-600 mt-2"><span className="font-semibold">ভাড়া শুরুর তারিখ:</span> {new Date(rental.rentDate).toLocaleDateString()}</p>
+            <p className="text-sm text-gray-600"><span className="font-semibold">ভাড়া শেষের তারিখ:</span> {new Date(rental.returnDate).toLocaleDateString()}</p>
             <p className="text-gray-700 mt-4 font-bold text-lg">মূল্য: <span className="text-blue-600">${rental.price}</span></p>
             <div className="mt-4 pt-4 border-t flex flex-col">
               <p className="text-gray-700"><span className="font-semibold">মহাজন:</span> {lender.name}</p>
+              <p className="text-gray-700"><span className="font-semibold">অবস্থান:</span> {lender.location || 'N/A'}
+              </p>
               <p className="text-gray-700 mb-4"><span className="font-semibold">যোগাযোগ:</span> {lender.phone}</p>
               <button
                 onClick={() => handleRentItem(rental._id, lenderId)}
@@ -224,24 +202,28 @@ const RentPage = () => {
               )}
             </div>
           </div>
-        )) : <p className="col-span-full text-center text-gray-500 mt-10">বর্তমানে ভাড়ার জন্য কোনো আইটেম উপলব্ধ নেই।</p>}
+        )) : <p className="col-span-full text-center text-gray-500 mt-10">বর্তমানে ভাড়ার জন্য কোনো সরঞ্জাম উপলব্ধ নেই।</p>}
       </div>
 
       {/* My Rented Items Section */}
       {loggedInUser && myRentedItems.length > 0 && (
         <div className="mt-16">
           <header className="mb-8">
-            <h2 className="text-3xl font-bold text-green-800 mb-2">আমার ভাড়া করা আইটেম</h2>
-            <p className="text-lg text-gray-700">আপনার বর্তমানে ভাড়া করা আইটেমগুলো নিচে দেখুন।</p>
+            <h2 className="text-3xl font-bold text-green-800 mb-2">আমার ভাড়া করা সরঞ্জাম</h2>
+            <p className="text-lg text-gray-700">আপনার বর্তমানে ভাড়া করা সরঞ্জামগুলো নিচে দেখুন।</p>
           </header>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {myRentedItems.map(({ rental, lender, lenderId }) => (
               <div key={rental._id} className="bg-white p-6 rounded-2xl shadow-md border border-blue-300 transition-all duration-300">
                 <h3 className="text-xl font-bold text-blue-800 mb-2">{rental.items}</h3>
-                <p className="text-gray-700 mt-2"><span className="font-semibold">বিবরণ:</span> {rental.itemDesc || 'নেই'}</p>
+                <p className="text-gray-700 mt-2"><span className="font-semibold">বিবরণ:</span> {rental.itemsDesc || 'নেই'}</p>
+                <p className="text-sm text-gray-600 mt-2"><span className="font-semibold">সরঞ্জাম ভাড়া শুরুর তারিখ:</span> {new Date(rental.rentDate).toLocaleDateString()}</p>
+                <p className="text-sm text-gray-600"><span className="font-semibold">জমা দেওয়ার শেষের তারিখ:</span> {new Date(rental.returnDate).toLocaleDateString()}</p>
                 <p className="text-gray-700 mt-4 font-bold text-lg">মূল্য: <span className="text-blue-600">${rental.price}</span></p>
                 <div className="mt-4 pt-4 border-t flex flex-col">
                   <p className="text-gray-700"><span className="font-semibold">মহাজন:</span> {lender.name}</p>
+                  <p className="text-gray-700"><span className="font-semibold">অবস্থান:</span> {lender.location || 'N/A'}
+                  </p>
                   <p className="text-gray-700 mb-4"><span className="font-semibold">যোগাযোগ:</span> {lender.phone}</p>
                   <button onClick={() => handleReturnItem(rental._id, lenderId)} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">ফেরত দিন</button>
                 </div>

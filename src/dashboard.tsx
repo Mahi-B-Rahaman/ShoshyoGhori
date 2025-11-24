@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNotifications } from "./NotificationContext";
-import type { User } from './AuthContext';
+import { useAuth, type User, type PlantedCrop } from './AuthContext';
 
 interface Crop {
   "Season": string;
@@ -14,11 +14,6 @@ interface Crop {
   "Max Relative Humidity": string;
   "Min Relative Humidity": string;
   "Country": string;
-}
-
-interface PlantedCrop {
-  crop: Crop;
-  plantedDate: Date;
 }
 
 interface ForecastDay {
@@ -68,7 +63,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [farmData, setFarmData] = useState({ temperature: 0, humidity: 0 });
   const [userData, setUserData] = useState<User>(user);
-  const [featuredCrop, setFeaturedCrop] = useState<PlantedCrop | null>(null);
+  const { setLoggedInUser } = useAuth();
   const { addNotification } = useNotifications();
 
   const currentSeason = getCurrentSeason();
@@ -90,24 +85,17 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
           humidity: (fetchedUserData as any).soilHumidity || 0, // Cast to any to access old property
         });
         // Ensure plantedDate is a Date object
-        const userPlantedCrops = (fetchedUserData.plantedCrops || []).map(pc => ({
+        const userPlantedCrops = (fetchedUserData.crops || []).map(pc => ({
           ...pc,
-          plantedDate: new Date(pc.plantedDate),
+          plantedDate: new Date(), // Fallback, as the new schema doesn't store this
         }));
         setPlantedCrops(userPlantedCrops);
-
-        // Check for a featured crop from localStorage
-        const featuredCropName = localStorage.getItem('featuredCropName');
-        if (featuredCropName) {
-          const foundCrop = userPlantedCrops.find(pc => pc.crop["Products name"] === featuredCropName);
-          if (foundCrop) setFeaturedCrop(foundCrop);
-        }
       } catch (err: any) {
         setError(err.message);
       }
     };
     fetchUserData();
-  }, [user._id, userApiUrl]);
+  }, [user]);
 
   // Effect to fetch weather data once user lat/lon are available
   useEffect(() => {
@@ -227,7 +215,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
 
   const plantedCropSet = useMemo(() => {
     // A fast way to check if a crop is already planted
-    return new Set(plantedCrops.map(pc => pc.crop["Products name"]));
+    return new Set(plantedCrops.map(pc => pc.cropName));
   }, [plantedCrops]);
 
   const handleCropSelect = (crop: Crop, index: number) => {
@@ -251,26 +239,28 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
 
     const cropToPlant = displayedCrops[selectedCropIndex];
     if (cropToPlant && !plantedCropSet.has(cropToPlant["Products name"])) {
-      const newPlantedCrop = { crop: cropToPlant, plantedDate: new Date() };
+      const newPlantedCrop: PlantedCrop = {
+        cropName: cropToPlant["Products name"],
+        planMonth: cropToPlant.Transplant,
+        Harvest: cropToPlant.Harvest,
+        plantedDate: new Date(),
+      };
       const updatedPlantedCrops = [...plantedCrops, newPlantedCrop];
-      
-      // Prepare data in the format the API expects
-      const cropNames = updatedPlantedCrops.map(pc => pc.crop["Products name"]);
-      const harvestDates = updatedPlantedCrops.map(pc => pc.crop.Harvest);
 
       try {
         const res = await fetch(userApiUrl, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          // Send data matching the API schema
           body: JSON.stringify({ 
-            crop: cropNames,
-            harvest: harvestDates,
-            plantedCrops: updatedPlantedCrops // Also send the detailed array for frontend use
+            // Send the new `crops` array matching the new schema
+            crops: updatedPlantedCrops.map(({ cropName, planMonth, Harvest }) => ({ cropName, planMonth, Harvest })),
           }),
         });
         if (!res.ok) throw new Error("ফসল যোগ করতে ব্যর্থ হয়েছে।");
         setPlantedCrops(updatedPlantedCrops);
+        // Also update the user object in the auth context to keep it in sync
+        const updatedUser = { ...user, plantedCrops: updatedPlantedCrops };
+        setLoggedInUser(updatedUser);
       } catch (err: any) {
         setError(err.message);
       }
@@ -288,20 +278,16 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
 
   const confirmRemovePlantedCrop = async () => {
     if (!cropToCancel) return;
-    const updatedPlantedCrops = plantedCrops.filter(pc => pc.crop["Products name"] !== cropToCancel);
-    
-    // Prepare data in the format the API expects
-    const cropNames = updatedPlantedCrops.map(pc => pc.crop["Products name"]);
-    const harvestDates = updatedPlantedCrops.map(pc => pc.crop.Harvest);
+    const updatedPlantedCrops = plantedCrops.filter(pc => pc.cropName !== cropToCancel);
 
     try {
       const res = await fetch(userApiUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          crop: cropNames,
-          harvest: harvestDates,
-          plantedCrops: updatedPlantedCrops }),
+          // Send the updated `crops` array
+          crops: updatedPlantedCrops.map(({ cropName, planMonth, Harvest }) => ({ cropName, planMonth, Harvest })),
+        }),
       });
       if (!res.ok) throw new Error("ফসল মুছে ফেলতে ব্যর্থ হয়েছে।");
       setPlantedCrops(updatedPlantedCrops);
@@ -316,8 +302,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
   };
 
   const handleSelectFeaturedCrop = (crop: PlantedCrop) => {
-    setFeaturedCrop(crop);
-    localStorage.setItem('featuredCropName', crop.crop["Products name"]);
+    localStorage.setItem('featuredCropName', crop.cropName);
   };
 
 
@@ -421,11 +406,6 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
           </div>
       </div>
 
-      {/* Featured Crop Progress Bar */}
-      {featuredCrop && (
-        <FeaturedCropProgress plantedCrop={featuredCrop} />
-      )}
-
       <main className="flex flex-col">
         <div className="mb-6">
           <label htmlFor="search" className="text-xl font-bold text-gray-800 mb-2 block">
@@ -446,7 +426,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedCrops.map((crop, index) => {
                 const isSuitable = suitableCropSet.has(crop["Products name"]);
-                const plantedInfo = plantedCrops.find(pc => pc.crop["Products name"] === crop["Products name"]);
+                const plantedInfo = plantedCrops.find(pc => pc.cropName === crop["Products name"]);
                 const isPlanted = !!plantedInfo;
                 const key = `${crop["Products name"]}-${index}`;
 
@@ -505,7 +485,7 @@ const CropCard = ({ crop, isSuitable, onClick }: { crop: Crop; isSuitable: boole
 );
 
 const PlantedCropCard = ({ plantedCrop, onRemove, onSelect }: { plantedCrop: PlantedCrop; onRemove: (cropName: string) => void; onSelect: () => void; }) => {
-  const { crop, plantedDate } = plantedCrop;
+  const { cropName, planMonth, Harvest, plantedDate } = plantedCrop;
 
   const getMonthNumber = (monthName: string) => {
     const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -513,15 +493,15 @@ const PlantedCropCard = ({ plantedCrop, onRemove, onSelect }: { plantedCrop: Pla
   };
   
   // Handle cases where Transplant might be undefined or not a string
-  const transplantMonth = typeof crop.Transplant === 'string' ? getMonthNumber(crop.Transplant) : new Date(plantedDate).getMonth();
-  const harvestMonth = getMonthNumber(crop.Harvest);
+  const transplantMonth = typeof planMonth === 'string' ? getMonthNumber(planMonth) : new Date(plantedDate!).getMonth();
+  const harvestMonth = getMonthNumber(Harvest);
 
   // Handle year wrap-around (e.g., Transplant in Nov, Harvest in Feb)
   const totalDurationDays = harvestMonth >= transplantMonth
     ? (harvestMonth - transplantMonth) * 30 // Approximation
     : (12 - transplantMonth + harvestMonth) * 30;
 
-  const daysSincePlanting = Math.floor((new Date().getTime() - plantedDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysSincePlanting = Math.floor((new Date().getTime() - new Date(plantedDate!).getTime()) / (1000 * 60 * 60 * 24));
   
   const progress = totalDurationDays > 0 ? Math.min(Math.floor((daysSincePlanting / totalDurationDays) * 100), 100) : 0;
 
@@ -533,7 +513,7 @@ const PlantedCropCard = ({ plantedCrop, onRemove, onSelect }: { plantedCrop: Pla
     >
       <div className="absolute inset-0 bg-blue-900/50"></div>
       <button
-        onClick={() => onRemove(crop["Products name"])}
+        onClick={() => onRemove(cropName)}
         className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-red-600 active:shadow-inner transition-all text-lg font-bold leading-none"
         aria-label="বাতিল করুন"
         title="বাতিল করুন"
@@ -541,7 +521,7 @@ const PlantedCropCard = ({ plantedCrop, onRemove, onSelect }: { plantedCrop: Pla
         &times;
       </button>
       <div className="relative z-10 text-white">
-        <h3 className="text-lg font-bold mb-1">{crop["Products name"]}</h3>
+        <h3 className="text-lg font-bold mb-1">{cropName}</h3>
         <p className="text-sm text-gray-200 mb-2"><span className="font-semibold">রোপণ করা হয়েছে</span></p>
         <div className="flex justify-between mb-1">
           <span className="text-xs font-medium">অগ্রগতি</span>
@@ -557,49 +537,6 @@ const PlantedCropCard = ({ plantedCrop, onRemove, onSelect }: { plantedCrop: Pla
     </div>
   );
 };
-
-const FeaturedCropProgress = ({ plantedCrop }: { plantedCrop: PlantedCrop }) => {
-  const { crop, plantedDate } = plantedCrop;
-
-  const getMonthNumber = (monthName: string) => {
-    const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-    return months.indexOf(monthName.slice(0, 3).toLowerCase());
-  };
-
-  const transplantMonth = typeof crop.Transplant === 'string' ? getMonthNumber(crop.Transplant) : new Date(plantedDate).getMonth();
-  const harvestMonth = getMonthNumber(crop.Harvest);
-
-  const totalDurationDays = harvestMonth >= transplantMonth
-    ? (harvestMonth - transplantMonth) * 30
-    : (12 - transplantMonth + harvestMonth) * 30;
-
-  const daysSincePlanting = Math.floor((new Date().getTime() - new Date(plantedDate).getTime()) / (1000 * 60 * 60 * 24));
-
-  const progress = totalDurationDays > 0 ? Math.min(Math.floor((daysSincePlanting / totalDurationDays) * 100), 100) : 0;
-
-  return (
-    <section className="mb-8 p-6 rounded-2xl shadow-lg bg-white border-l-8 border-green-600">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">নির্বাচিত ফসল: <span className="text-green-700">{crop["Products name"]}</span></h2>
-      <div>
-        <div className="flex justify-between mb-1">
-          <span className="text-base font-medium text-green-700">অগ্রগতি</span>
-          <span className="text-sm font-medium text-green-700">{progress}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3.5">
-          <div
-            className="bg-green-600 h-3.5 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-        <div className="flex justify-between mt-1 text-xs text-gray-600">
-          <span>রোপণ</span>
-          <span>ফসল তোলা ({crop.Harvest})</span>
-        </div>
-      </div>
-    </section>
-  );
-};
-
 
 const getWeatherIcon = (code: number): string => {
   if (code === 0) return '☀️'; // Clear sky

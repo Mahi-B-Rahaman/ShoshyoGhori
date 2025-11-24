@@ -1,25 +1,24 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 
-interface Crop {
-  "Products name": string;
-  "Transplant": string;
-  "Harvest": string;
-}
-
 export interface PlantedCrop {
-  crop: Crop;
-  plantedDate: Date | string; // Allow string for JSON data
+  _id?: string;
+  cropName: string;
+  planMonth: string;
+  Harvest: string;
+  // This will be added on the frontend for progress calculation
+  plantedDate?: Date | string; 
 }
 
 export interface Rental {
   _id: string;
   items: string;
-  itemDesc?: string;
+  itemsDesc?: string;
   rentDate: string;
   returnDate: string;
   price: number;
   rentedByName?: string;
   rentedByNumber?: string;
+  rentedByLocation?: string;
 }
 
 export interface User {
@@ -33,7 +32,7 @@ export interface User {
   accountType?: 'farmer' | 'lender';
   notification?: string[];
   rentals?: Rental[]; // For lenders
-  plantedCrops?: PlantedCrop[]; // For farmers
+  crops?: PlantedCrop[]; // This matches the new schema
   rentedItems?: any[]; // For farmers
 }
 
@@ -76,7 +75,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // The password check is based on the existing pattern in your login forms
             if (user.password === savedUserPass) {
               // Ensure accountType is set correctly on the user object
-              const userWithAccountType = { ...user, accountType: isLender ? 'lender' : 'farmer' };
+              const userWithAccountType = { 
+                ...user, 
+                accountType: isLender ? 'lender' : 'farmer',
+                crops: user.crops || [] // Match the new schema
+              };
               setLoggedInUser(userWithAccountType);
             } else {
               logout(); // Password mismatch, clear credentials

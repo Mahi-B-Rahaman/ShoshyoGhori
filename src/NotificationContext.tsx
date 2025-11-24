@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 
 export interface Notification {
   id: number;
@@ -18,7 +19,25 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+  const { loggedInUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Effect to manage notifications based on user state.
+  React.useEffect(() => {
+    if (loggedInUser && loggedInUser.notification && loggedInUser.notification.length > 0) {
+      // User is logged in and has notifications, load them.
+      const loadedNotifications = loggedInUser.notification.map((msg, index) => ({
+        id: Date.now() + index, // Simple unique ID
+        message: msg,
+        type: 'info' as const,
+        read: false,
+      }));
+      setNotifications(loadedNotifications);
+    } else {
+      // No user or no notifications, clear the list.
+      setNotifications([]);
+    }
+  }, [loggedInUser]);
 
   const addNotification = useCallback((message: string, type: Notification['type']) => {
     // Prevent duplicate messages

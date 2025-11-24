@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth, type User } from './AuthContext';
+import { useAuth, type User, type PlantedCrop } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
-
-interface Crop {
-  "Products name": string;
-  "Transplant": string;
-  "Harvest": string;
-}
-
-interface PlantedCrop {
-  crop: Crop;
-  plantedDate: Date;
-}
-
 const ProfilePage = () => {
-  const { loggedInUser, setLoggedInUser, logout } = useAuth();
+  const { loggedInUser, setLoggedInUser } = useAuth();
   const navigate = useNavigate();
 
   // State for user profile fields
@@ -27,24 +15,37 @@ const ProfilePage = () => {
   // State for planted crops management
   const [plantedCrops, setPlantedCrops] = useState<PlantedCrop[]>([]);
   const [cropToCancel, setCropToCancel] = useState<PlantedCrop | null>(null);
+  const [featuredCrop, setFeaturedCrop] = useState<PlantedCrop | null>(null);
 
   useEffect(() => {
-    if (loggedInUser) {
-      setName(loggedInUser.name);
-      setPhone(loggedInUser.phone);
-      setLocation(loggedInUser.location || '');
-      // Ensure plantedCrops are correctly parsed with Date objects
-      if (loggedInUser.accountType === 'farmer' && loggedInUser.plantedCrops) {
-        const parsedCrops = loggedInUser.plantedCrops.map(pc => ({
-          ...pc,
-          plantedDate: new Date(pc.plantedDate),
-        }));
-        setPlantedCrops(parsedCrops);
+    const initializeProfile = async () => {
+      if (loggedInUser) {
+        setName(loggedInUser.name);
+        setPhone(loggedInUser.phone);
+        setLocation(loggedInUser.location || '');
+
+        if (loggedInUser.accountType === 'farmer') {
+          const cropsToDisplay = (loggedInUser.crops || []).map(pc => ({
+            ...pc,
+            // Add a plantedDate for progress calculation, fallback to now
+            plantedDate: pc.plantedDate || new Date(),
+          }));
+
+          setPlantedCrops(cropsToDisplay);
+
+          // Check for a featured crop from localStorage
+          const featuredCropName = localStorage.getItem('featuredCropName');
+          if (featuredCropName) {
+            const foundCrop = cropsToDisplay.find(pc => pc.cropName === featuredCropName);
+            if (foundCrop) setFeaturedCrop(foundCrop);
+          }
+        }
+      } else {
+        navigate('/');
       }
-    } else {
-      // If no user is logged in, redirect to home
-      navigate('/');
-    }
+    };
+
+    initializeProfile();
   }, [loggedInUser, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -102,12 +103,15 @@ const ProfilePage = () => {
   const handleRemoveCrop = async () => {
     if (!cropToCancel || !loggedInUser) return;
 
-    const updatedPlantedCrops = plantedCrops.filter(
-      pc => pc.crop["Products name"] !== cropToCancel.crop["Products name"]
-    );
+    // If the crop being removed is the featured crop, clear the state and localStorage
+    if (featuredCrop && cropToCancel.cropName === featuredCrop.cropName) {
+      setFeaturedCrop(null);
+      localStorage.removeItem('featuredCropName');
+    }
 
-    const cropNames = updatedPlantedCrops.map(pc => pc.crop["Products name"]);
-    const harvestDates = updatedPlantedCrops.map(pc => pc.crop.Harvest);
+    const updatedPlantedCrops = plantedCrops.filter(
+      pc => pc.cropName !== cropToCancel.cropName
+    );
 
     try {
       const url = `https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${loggedInUser._id}`;
@@ -115,9 +119,7 @@ const ProfilePage = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          crop: cropNames,
-          harvest: harvestDates,
-          plantedCrops: updatedPlantedCrops,
+          crops: updatedPlantedCrops.map(({ cropName, planMonth, Harvest }) => ({ cropName, planMonth, Harvest })),
         }),
       });
 
@@ -125,7 +127,7 @@ const ProfilePage = () => {
 
       setPlantedCrops(updatedPlantedCrops);
       // Also update the user object in the auth context
-      const updatedUser = { ...loggedInUser, plantedCrops: updatedPlantedCrops };
+      const updatedUser = { ...loggedInUser, crops: updatedPlantedCrops };
       setLoggedInUser(updatedUser);
 
     } catch (error: any) {
@@ -193,7 +195,7 @@ const ProfilePage = () => {
               <div className="space-y-4">
                 {plantedCrops.map((pc) => (
                   <PlantedCropItem 
-                    key={pc.crop["Products name"]} 
+                    key={pc.cropName} 
                     plantedCrop={pc} 
                     onRemove={() => setCropToCancel(pc)} 
                   />
@@ -204,6 +206,16 @@ const ProfilePage = () => {
             )}
           </div>
         )}
+
+        {/* Featured Crop Progress Bar - moved to the bottom */}
+        {featuredCrop && (
+          <div className="mt-12">
+             <FeaturedCropProgress 
+              plantedCrop={featuredCrop} 
+              onRemove={() => setCropToCancel(featuredCrop)} 
+            />
+          </div>
+        )}
       </div>
 
       {/* Remove Crop Confirmation Modal */}
@@ -212,7 +224,7 @@ const ProfilePage = () => {
           <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md text-center">
             <h2 className="text-2xl font-bold mb-4">বাতিল নিশ্চিত করুন</h2>
             <p className="text-lg mb-6">
-              আপনি কি সত্যিই <span className="font-bold text-red-700">{cropToCancel.crop["Products name"]}</span> তালিকা থেকে মুছে ফেলতে চান?
+              আপনি কি সত্যিই <span className="font-bold text-red-700">{cropToCancel.cropName}</span> তালিকা থেকে মুছে ফেলতে চান?
             </p>
             <div className="flex justify-center gap-4">
               <button
@@ -235,22 +247,72 @@ const ProfilePage = () => {
   );
 };
 
+// --- Helper Component for the main featured crop progress bar ---
+const FeaturedCropProgress = ({ plantedCrop, onRemove }: { plantedCrop: PlantedCrop; onRemove: () => void; }) => {
+  const { cropName, planMonth, Harvest, plantedDate } = plantedCrop;
+
+  const getMonthNumber = (monthName: string) => {
+    const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    return months.indexOf(monthName.slice(0, 3).toLowerCase());
+  };
+
+  const transplantMonth = typeof planMonth === 'string' ? getMonthNumber(planMonth) : new Date(plantedDate!).getMonth();
+  const harvestMonth = getMonthNumber(Harvest);
+
+  const totalDurationDays = harvestMonth >= transplantMonth
+    ? (harvestMonth - transplantMonth) * 30
+    : (12 - transplantMonth + harvestMonth) * 30;
+
+  const daysSincePlanting = Math.floor((new Date().getTime() - new Date(plantedDate!).getTime()) / (1000 * 60 * 60 * 24));
+
+  const progress = totalDurationDays > 0 ? Math.min(Math.floor((daysSincePlanting / totalDurationDays) * 100), 100) : 0;
+
+  return (
+    <section className="mb-8 p-6 rounded-2xl shadow-lg bg-gray-50 border-l-8 border-green-600">
+      <div className="flex justify-between items-start">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">নির্বাচিত ফসল: <span className="text-green-700">{cropName}</span></h2>
+        <button
+          onClick={onRemove}
+          className="bg-red-100 text-red-600 rounded-full w-7 h-7 flex items-center justify-center shadow-sm hover:bg-red-200 active:shadow-inner transition-all text-lg font-bold leading-none flex-shrink-0 -mt-2 -mr-2"
+          aria-label="বাতিল করুন"
+          title="বাতিল করুন"
+        >
+          &times;
+        </button>
+      </div>
+      <div>
+        <div className="flex justify-between mb-1">
+          <span className="text-base font-medium text-green-700">অগ্রগতি</span>
+          <span className="text-sm font-medium text-green-700">{progress}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-3.5">
+          <div className="bg-green-600 h-3.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+        </div>
+        <div className="flex justify-between mt-1 text-xs text-gray-600">
+          <span>রোপণ ({planMonth})</span>
+          <span>ফসল তোলা ({Harvest})</span>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 // --- Helper Component for Displaying a Planted Crop ---
 const PlantedCropItem = ({ plantedCrop, onRemove }: { plantedCrop: PlantedCrop; onRemove: () => void; }) => {
-  const { crop, plantedDate } = plantedCrop;
+  const { cropName, planMonth, Harvest, plantedDate } = plantedCrop;
 
   const getMonthNumber = (monthName: string) => ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthName.slice(0, 3).toLowerCase());
-  const transplantMonth = new Date(plantedDate).getMonth();
-  const harvestMonth = getMonthNumber(crop.Harvest);
+  const transplantMonth = new Date(plantedDate!).getMonth();
+  const harvestMonth = getMonthNumber(Harvest);
   const totalDurationDays = harvestMonth >= transplantMonth ? (harvestMonth - transplantMonth) * 30 : (12 - transplantMonth + harvestMonth) * 30;
-  const daysSincePlanting = Math.floor((new Date().getTime() - new Date(plantedDate).getTime()) / (1000 * 60 * 60 * 24));
+  const daysSincePlanting = Math.floor((new Date().getTime() - new Date(plantedDate!).getTime()) / (1000 * 60 * 60 * 24));
   const progress = totalDurationDays > 0 ? Math.min(Math.floor((daysSincePlanting / totalDurationDays) * 100), 100) : 0;
 
   return (
     <div className="bg-gray-50 p-4 rounded-lg border flex items-center justify-between gap-4">
       <div className="flex-grow">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="font-bold text-gray-800">{crop["Products name"]}</h3>
+          <h3 className="font-bold text-gray-800">{cropName}</h3>
           <span className="text-sm font-medium text-green-700">{progress}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
