@@ -27,7 +27,7 @@ const Navbar = () => {
               <img 
                 src="https://github.com/Mahi-B-Rahaman/ShoshyoGhori/blob/master/public/shoshyo-removebg-preview.png?raw=true" 
                 alt="শস্যঘড়ি লোগো" 
-                className="h-12 w-auto" />
+                className="h-20 w-auto" />
               <span className="hidden sm:inline">শস্যঘড়ি</span>
             </NavLink>
           </div>
