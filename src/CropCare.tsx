@@ -39,7 +39,7 @@ const CropCare: React.FC = () => {
     const systemPrompt = `
       Act as an agricultural expert for Bangladeshi crops.
       Language: Bangla.
-      Task: Provide detailed farming guidelines for the crop provided by the user.
+      Task: Provide detailed farming guidelines for the crop name provided by the user.
       
       You MUST return the response in valid JSON format only. Do not add any markdown formatting like \`\`\`json.
       The JSON structure must be exactly like this:
@@ -54,6 +54,12 @@ const CropCare: React.FC = () => {
           "fertilizerAndPest": "Fertilizer and Pest control guide in Bangla",
           "harvesting": "Harvesting signs and method in Bangla"
         }
+      }
+
+      If the user's input is NOT a recognizable crop name, you MUST return this specific JSON structure instead:
+      {
+        "error": "Not a valid crop name",
+        "message": "অনুগ্রহ করে একটি সঠিক ফসলের নাম লিখুন।"
       }
     `;
 
@@ -87,6 +93,12 @@ const CropCare: React.FC = () => {
       textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
       
       const parsedData: CropData = JSON.parse(textResponse);
+
+      // Check if the AI returned a custom error for an invalid crop name
+      if ('error' in parsedData && (parsedData as any).error === "Not a valid crop name") {
+        throw new Error((parsedData as any).message || 'অনুগ্রহ করে একটি সঠিক ফসলের নাম লিখুন।');
+      }
+
       setCropData(parsedData);
 
     } catch (err: any) {
@@ -99,8 +111,11 @@ const CropCare: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputVal.trim()) {
+    if (inputVal.trim().length > 0) {
       fetchCropData(inputVal.trim());
+    } else {
+      setError('অনুগ্রহ করে একটি ফসলের নাম লিখুন।');
+      setCropData(null); // Clear previous results if the input is empty
     }
   };
 

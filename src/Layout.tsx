@@ -5,6 +5,8 @@ import RentPage from './RentPage.tsx';
 import Navbar from './Navbar.tsx';
 import CropCare from './CropCare.tsx';
 import ProfilePage from './ProfilePage.tsx';
+import AdminPage from './AdminPage.tsx';
+import SupportPage from './SupportPage.tsx';
 
 export const Layout = () => {
   return (
@@ -16,6 +18,8 @@ export const Layout = () => {
         <Route path="/rent" element={<RentPage />} />
         <Route path="/crop-care" element={<CropCare />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/support" element={<SupportPage />} />
       </Routes>
     </BrowserRouter>
   );

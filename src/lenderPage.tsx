@@ -68,12 +68,14 @@ const LenderPage = () => {
       console.log('Login Success', user.name);
       setLoginError(false);
       setLoginErrorMessage('');
-      setLoggedInUser(user);
-      console.log('Logged in user data:', user);
+      const lenderUser = { ...user, accountType: 'lender' };
+      setLoggedInUser(lenderUser);
+      console.log('Logged in user data:', lenderUser);
 
       // Save credentials to localStorage for persistent login
       localStorage.setItem('userId', user._id);
       localStorage.setItem('userPass', loginPassword);
+      localStorage.setItem('accountType', 'lender');
 
       // Redirect to lender dashboard or another page
       //window.location.href = '/lenderDashboard';
@@ -449,7 +451,6 @@ const LenderPage = () => {
                     />
                     পাসওয়ার্ড দেখুন
                   </label>
-                  <a href="#" className="text-emerald-600 hover:text-emerald-800 font-medium hover:underline">পাসওয়ার্ড ভুলে গেছেন?</a>
                 </div>
 
                 {loginError && (

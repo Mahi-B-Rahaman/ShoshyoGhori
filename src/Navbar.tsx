@@ -46,6 +46,9 @@ const Navbar = () => {
                   <NavLink to="/lender" className="text-gray-600 hover:text-green-700 hover:bg-green-50 px-3 py-2 rounded-md text-sm font-medium transition-colors" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>
                     মহাজন
                   </NavLink>
+                  <NavLink to="/admin" className="text-gray-600 hover:text-green-700 hover:bg-green-50 px-3 py-2 rounded-md text-sm font-medium transition-colors" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>
+                    অ্যাডমিন
+                  </NavLink>
                 </>
               )}
               {(!loggedInUser || loggedInUser.accountType !== 'lender') && (
@@ -55,6 +58,9 @@ const Navbar = () => {
               )}
               <NavLink to="/crop-care" className="text-gray-600 hover:text-green-700 hover:bg-green-50 px-3 py-2 rounded-md text-sm font-medium transition-colors" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>
                  AI কৃষি সহকারী 
+              </NavLink>
+              <NavLink to="/support" className="text-gray-600 hover:text-green-700 hover:bg-green-50 px-3 py-2 rounded-md text-sm font-medium transition-colors" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>
+                 সাপোর্ট
               </NavLink>
           </div>
 
@@ -98,12 +104,14 @@ const Navbar = () => {
                 <>
                   <NavLink to="/" className="block text-gray-600 hover:text-green-700 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>কৃষক</NavLink>
                   <NavLink to="/lender" className="block text-gray-600 hover:text-green-700 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>মহাজন</NavLink>
+                  <NavLink to="/admin" className="block text-gray-600 hover:text-green-700 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>অ্যাডমিন</NavLink>
                 </>
               )}
               {(!loggedInUser || loggedInUser.accountType !== 'lender') && (
                 <NavLink to="/rent" className="block text-gray-600 hover:text-green-700 hover:bg-green-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>ভাড়া করুন</NavLink>
               )}
               <NavLink to="/crop-care" className="block text-gray-600 hover:text-green-700 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>ফসলের যত্ন</NavLink>
+              <NavLink to="/support" className="block text-gray-600 hover:text-green-700 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium" style={({ isActive }) => isActive ? activeLinkStyle : undefined}>সাপোর্ট</NavLink>
               {loggedInUser && (
                 <div className="border-t border-gray-200 pt-4 mt-2">
                   <div className="flex items-center justify-between px-3 mb-3">
