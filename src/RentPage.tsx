@@ -182,7 +182,7 @@ const RentPage = () => {
             <p className="text-gray-700 mt-2"><span className="font-semibold">বিবরণ:</span> {rental.itemsDesc || 'নেই'}</p>
             <p className="text-sm text-gray-600 mt-2"><span className="font-semibold">ভাড়া শুরুর তারিখ:</span> {new Date(rental.rentDate).toLocaleDateString()}</p>
             <p className="text-sm text-gray-600"><span className="font-semibold">ভাড়া শেষের তারিখ:</span> {new Date(rental.returnDate).toLocaleDateString()}</p>
-            <p className="text-gray-700 mt-4 font-bold text-lg">মূল্য: <span className="text-blue-600">${rental.price}</span></p>
+            <p className="text-gray-700 mt-4 font-bold text-lg">মূল্য: <span className="text-blue-600">৳{rental.price}</span></p>
             <div className="mt-4 pt-4 border-t flex flex-col">
               <p className="text-gray-700"><span className="font-semibold">মহাজন:</span> {lender.name}</p>
               <p className="text-gray-700"><span className="font-semibold">অবস্থান:</span> {lender.location || 'N/A'}
