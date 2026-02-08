@@ -54,8 +54,8 @@ const AdminPage = () => {
       const fetchAllUsers = async () => {
         setLoading(true);
         try {
-          const farmerRes = await fetch('https://shoshyo-ghori-data-api.vercel.app/api/sensordata');
-          const lenderRes = await fetch('https://crop-clock-renter-api-uos1.vercel.app/api/renterdata');
+          const farmerRes = await fetch(import.meta.env.VITE_BASE_URL_FARMER);
+          const lenderRes = await fetch(import.meta.env.VITE_BASE_URL_LENDER);
 
           if (!farmerRes.ok || !lenderRes.ok) {
             throw new Error('Failed to fetch user data');
@@ -95,8 +95,8 @@ const AdminPage = () => {
   const checkApiConnectivity = async (user: CombinedUser): Promise<boolean> => {
     try {
       const apiPaths = {
-        farmer: 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata',
-        lender: 'https://crop-clock-renter-api-uos1.vercel.app/api/renterdata',
+        farmer: import.meta.env.VITE_BASE_URL_FARMER,
+        lender: import.meta.env.VITE_BASE_URL_LENDER,
       };
       const url = `${apiPaths[user.api]}/${user._id}`;
       
@@ -120,7 +120,7 @@ const AdminPage = () => {
     }
 
     try {
-      const url = `https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${user._id}`;
+      const url = `${import.meta.env.VITE_BASE_URL_FARMER}/${user._id}`;
       const res = await fetch(url);
       
       if (!res.ok) {
@@ -217,8 +217,8 @@ const AdminPage = () => {
   const checkApiLatency = async () => {
     setCheckingLatency(true);
     try {
-      const farmerApiUrl = 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata';
-      const lenderApiUrl = 'https://crop-clock-renter-api-uos1.vercel.app/api/renterdata';
+      const farmerApiUrl = import.meta.env.VITE_BASE_URL_FARMER;
+      const lenderApiUrl = import.meta.env.VITE_BASE_URL_LENDER;
 
       // Measure both APIs in parallel
       const [farmerLatency, lenderLatency] = await Promise.all([
@@ -353,8 +353,8 @@ const AdminPage = () => {
 
   const handleUpdateUser = async (userToUpdate: CombinedUser) => {
     const apiPaths = {
-      farmer: 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata',
-      lender: 'https://crop-clock-renter-api-uos1.vercel.app/api/renterdata',
+      farmer: import.meta.env.VITE_BASE_URL_FARMER,
+      lender: import.meta.env.VITE_BASE_URL_LENDER,
     };
     const url = `${apiPaths[userToUpdate.api]}/${userToUpdate._id}`;
 

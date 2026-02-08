@@ -46,8 +46,8 @@ const ProfilePage = () => {
     setMessage('');
 
     const apiPaths = {
-      farmer: 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata',
-      lender: 'https://crop-clock-renter-api-uos1.vercel.app/api/renterdata',
+      farmer: import.meta.env.VITE_BASE_URL_FARMER,
+      lender: import.meta.env.VITE_BASE_URL_LENDER,
     };
 
     const accountType = loggedInUser.accountType || 'farmer'; // Default to farmer if not set

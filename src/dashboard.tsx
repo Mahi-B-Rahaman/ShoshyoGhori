@@ -70,7 +70,7 @@ function Dashboard({ user, onLogout }: { user: User, onLogout: () => void }) {
   const bengaliSeason = translateSeasonToBengali(currentSeason);
 
   // Central API URL
-  const userApiUrl = `https://shoshyo-ghori-data-api.vercel.app/api/sensordata/${user._id}`;
+  const userApiUrl = `${import.meta.env.VITE_BASE_URL_FARMER}/${user._id}`;
 
   // Effect to fetch initial user data (temp, humidity, planted crops)
   useEffect(() => {

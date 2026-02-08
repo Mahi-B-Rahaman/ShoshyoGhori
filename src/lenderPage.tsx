@@ -41,7 +41,7 @@ const LenderPage = () => {
     setLoginLoading(true);
 
     try {
-      const url = 'https://crop-clock-renter-api-uos1.vercel.app/api/renterdata';
+      const url = import.meta.env.VITE_BASE_URL_LENDER;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Response status: ${res.status}`);
       const users = await res.json();
@@ -107,7 +107,7 @@ const LenderPage = () => {
 
     try {
       // Fetch existing phone numbers from API
-      const url = 'https://crop-clock-renter-api-uos1.vercel.app/api/renterdata';
+      const url = import.meta.env.VITE_BASE_URL_LENDER;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch existing users: ${res.status}`);
       const users = await res.json();
@@ -164,7 +164,7 @@ const LenderPage = () => {
 
     const fetchLenderData = async () => {
       try {
-        const url = `https://crop-clock-renter-api-uos1.vercel.app/api/renterdata/${userData._id}`;
+        const url = `${import.meta.env.VITE_BASE_URL_LENDER}/${userData._id}`;
         const res = await fetch(url);
         if (!res.ok) {
           console.error('Polling: Failed to fetch lender data.');
@@ -203,7 +203,7 @@ const LenderPage = () => {
     const updatedRentals = [...(userData.rentals || []), newRental];
 
     try {
-      const url = `https://crop-clock-renter-api-uos1.vercel.app/api/renterdata/${userData._id}`;
+      const url = `${import.meta.env.VITE_BASE_URL_LENDER}/${userData._id}`;
       const res = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -240,7 +240,7 @@ const LenderPage = () => {
     const updatedRentals = userData.rentals.filter(rental => rental._id !== rentalId);
 
     try {
-      const url = `https://crop-clock-renter-api-uos1.vercel.app/api/renterdata/${userData._id}`;
+      const url = `${import.meta.env.VITE_BASE_URL_LENDER}/${userData._id}`;
       const res = await fetch(url, {
         method: 'PUT',
         headers: {

@@ -46,7 +46,7 @@ export default function App() {
 
     try {
       // Fetch existing phone numbers from API
-      const url = 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata';
+      const url = import.meta.env.VITE_BASE_URL_FARMER;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch existing users: ${res.status}`);
       const users = await res.json();
@@ -102,7 +102,7 @@ export default function App() {
     setLoginLoading(true);
 
     try {
-      const url = 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata';
+      const url = import.meta.env.VITE_BASE_URL_FARMER;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Response status: ${res.status}`);
       const users = await res.json();

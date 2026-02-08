@@ -26,7 +26,7 @@ const RentPage = () => {
   useEffect(() => {
     const fetchAllRentals = async () => {
       try {
-        const res = await fetch('https://crop-clock-renter-api-uos1.vercel.app/api/renterdata');
+        const res = await fetch(import.meta.env.VITE_BASE_URL_LENDER);
         if (!res.ok) {
           throw new Error('Failed to fetch rental data.');
         }
@@ -97,7 +97,7 @@ const RentPage = () => {
       const existingNotifications = lender.notification || [];
       const updatedNotifications = [...existingNotifications, notificationMessage];
 
-      const url = `https://crop-clock-renter-api-uos1.vercel.app/api/renterdata/${lenderId}`;
+      const url = `${import.meta.env.VITE_BASE_URL_LENDER}/${lenderId}`;
       const res = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -152,7 +152,7 @@ const RentPage = () => {
     });
 
     try {
-      const url = `https://crop-clock-renter-api-uos1.vercel.app/api/renterdata/${lenderId}`;
+      const url = `${import.meta.env.VITE_BASE_URL_LENDER}/${lenderId}`;
       const res = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

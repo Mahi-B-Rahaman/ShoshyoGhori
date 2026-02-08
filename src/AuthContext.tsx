@@ -63,8 +63,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (savedUserId && savedUserPass && savedAccountType) {
         const isLender = savedAccountType === 'lender';
         const apiBase = isLender
-          ? 'https://crop-clock-renter-api-uos1.vercel.app/api/renterdata'
-          : 'https://shoshyo-ghori-data-api.vercel.app/api/sensordata';
+          ? import.meta.env.VITE_BASE_URL_LENDER
+          : import.meta.env.VITE_BASE_URL_FARMER;
         
         const url = `${apiBase}/${savedUserId}`;
 
